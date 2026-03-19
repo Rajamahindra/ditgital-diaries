@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useBuilderStore } from "@/lib/store";
 import { SECTION_LABELS } from "@/lib/utils";
-import { Palette, Type, Layout, Plus, Trash2 } from "lucide-react";
+import { Palette, Type, Layout, Plus, Trash2, Camera, ImageIcon, X } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 
 const FONT_OPTIONS = ["Inter", "Poppins", "Roboto", "Playfair Display", "Montserrat", "Lato", "Nunito"];
@@ -28,6 +28,55 @@ function ColorRow({ label, themeKey }: { label: string; themeKey: string }) {
   );
 }
 
+function ImageUploadField({ label, value, onChange, icon, aspectClass }: {
+  label: string;
+  value: string;
+  onChange: (url: string) => void;
+  icon: React.ReactNode;
+  aspectClass: string;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => onChange(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  return (
+    <div>
+      <label className={labelCls}>{label}</label>
+      <div
+        onClick={() => fileRef.current?.click()}
+        className={`relative w-full ${aspectClass} rounded-xl border-2 border-dashed border-gray-200 dark:border-white/10 overflow-hidden cursor-pointer group hover:border-secondary/50 transition-all`}
+      >
+        {value ? (
+          <>
+            <img src={value} alt={label} className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <span className="text-white text-xs font-medium">Change</span>
+            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); onChange(""); }}
+              className="absolute top-1.5 right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <X className="w-3 h-3 text-white" />
+            </button>
+          </>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-gray-300 dark:text-white/20">
+            {icon}
+            <span className="text-xs">Click to upload</span>
+          </div>
+        )}
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+    </div>
+  );
+}
+
 function SectionEditor({ section }: { section: ReturnType<typeof useBuilderStore.getState>["layout"]["sections"][0] }) {
   const { updateSection } = useBuilderStore();
   const update = (key: string, value: unknown) => updateSection(section.id, { [key]: value });
@@ -36,6 +85,22 @@ function SectionEditor({ section }: { section: ReturnType<typeof useBuilderStore
     case "profile":
       return (
         <div className="space-y-3">
+          {/* Banner upload */}
+          <ImageUploadField
+            label="Banner / Cover Photo"
+            value={(section.data.banner as string) || ""}
+            onChange={(url) => update("banner", url)}
+            icon={<ImageIcon className="w-6 h-6" />}
+            aspectClass="h-20"
+          />
+          {/* Profile photo upload */}
+          <ImageUploadField
+            label="Profile Photo"
+            value={(section.data.photo as string) || ""}
+            onChange={(url) => update("photo", url)}
+            icon={<Camera className="w-6 h-6" />}
+            aspectClass="h-24"
+          />
           {[
             { key: "name", label: "Full Name", placeholder: "Dr. Your Name" },
             { key: "profession", label: "Profession", placeholder: "e.g. Cardiologist" },
@@ -52,11 +117,6 @@ function SectionEditor({ section }: { section: ReturnType<typeof useBuilderStore
             <label className={labelCls}>Bio</label>
             <textarea value={(section.data.bio as string) || ""} onChange={(e) => update("bio", e.target.value)}
               placeholder="Write your professional bio..." className={`${inputCls} resize-none min-h-[80px]`} />
-          </div>
-          <div>
-            <label className={labelCls}>Photo URL</label>
-            <input value={(section.data.photo as string) || ""} onChange={(e) => update("photo", e.target.value)}
-              placeholder="https://..." className={inputCls} />
           </div>
         </div>
       );

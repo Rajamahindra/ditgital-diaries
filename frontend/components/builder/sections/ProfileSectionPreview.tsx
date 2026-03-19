@@ -30,6 +30,7 @@ export function ProfileSectionPreview({ data }: Props) {
   const bio = (data.bio as string) || "Write your bio here...";
   const tagline = (data.tagline as string) || "";
   const photo = data.photo as string | undefined;
+  const banner = data.banner as string | undefined;
 
   // Cover background
   let coverBg = `linear-gradient(135deg, ${secondaryColor}, ${accentColor})`;
@@ -63,6 +64,10 @@ export function ProfileSectionPreview({ data }: Props) {
     <div className="relative">
       {/* Cover */}
       <div className="h-28 relative overflow-hidden" style={{ background: coverBg }}>
+        {/* Banner image */}
+        {banner && (
+          <img src={banner} alt="banner" className="absolute inset-0 w-full h-full object-cover" />
+        )}
         {/* Pattern overlay */}
         {backgroundPattern && backgroundPattern !== "noise" && (
           <div className="absolute inset-0" style={{

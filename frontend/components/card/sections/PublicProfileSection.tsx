@@ -8,12 +8,18 @@ interface Props {
 }
 
 export function PublicProfileSection({ data }: Props) {
+  const banner = data.banner as string | undefined;
+
   return (
     <div>
       <div className="h-28 bg-gradient-to-br from-blue-600 to-violet-600 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20"
-          style={{ backgroundImage: "radial-gradient(circle at 30% 50%, rgba(255,255,255,0.4) 0%, transparent 60%)" }}
-        />
+        {banner ? (
+          <img src={banner} alt="banner" className="absolute inset-0 w-full h-full object-cover" />
+        ) : (
+          <div className="absolute inset-0 opacity-20"
+            style={{ backgroundImage: "radial-gradient(circle at 30% 50%, rgba(255,255,255,0.4) 0%, transparent 60%)" }}
+          />
+        )}
       </div>
       <div className="px-5 pb-5 -mt-12">
         <motion.div
