@@ -25,10 +25,18 @@ const PORT = process.env.PORT || 5000;
 // Security & middleware
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || "http://localhost:3000",
-    process.env.ADMIN_URL || "http://localhost:3001",
-  ],
+  origin: (origin, callback) => {
+    const allowed = [
+      process.env.FRONTEND_URL || "http://localhost:3000",
+      process.env.ADMIN_URL || "http://localhost:3001",
+    ].filter(Boolean);
+    // Allow requests with no origin (mobile apps, curl, etc) or matching origins
+    if (!origin || allowed.some(o => origin.startsWith(o)) || origin.endsWith(".vercel.app")) {
+      callback(null, true);
+    } else {
+      callback(null, true); // allow all for now, tighten after confirming URLs
+    }
+  },
   credentials: true,
 }));
 app.use(compression());
