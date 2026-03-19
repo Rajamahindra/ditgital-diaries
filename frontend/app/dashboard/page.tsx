@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Eye, MousePointer, Users, QrCode, Plus, ArrowRight, TrendingUp } from "lucide-react";
+import { Eye, MousePointer, Users, QrCode, Plus, ArrowRight } from "lucide-react";
 import { cardsAPI } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import type { Card } from "@/lib/types";
@@ -15,19 +15,34 @@ export default function DashboardPage() {
   const { user } = useAuthStore();
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
+  const [analytics, setAnalytics] = useState({ views: 0, clicks: 0, leads: 0, scans: 0 });
 
   useEffect(() => {
     cardsAPI.getAll()
-      .then((res) => setCards(res.data.cards || []))
+      .then((res) => {
+        const c = res.data.cards || [];
+        setCards(c);
+        // fetch real analytics if cards exist
+        if (c.length > 0) {
+          cardsAPI.getAnalytics?.()
+            .then((r: { data: { views?: number; clicks?: number; leads?: number; scans?: number } }) => setAnalytics({
+              views: r.data.views || 0,
+              clicks: r.data.clicks || 0,
+              leads: r.data.leads || 0,
+              scans: r.data.scans || 0,
+            }))
+            .catch(() => {});
+        }
+      })
       .catch(() => setCards([]))
       .finally(() => setLoading(false));
   }, []);
 
   const stats = [
-    { label: "Total Views", value: "2,847", change: "+12%", icon: Eye },
-    { label: "Button Clicks", value: "384", change: "+8%", icon: MousePointer },
-    { label: "Leads Captured", value: "47", change: "+23%", icon: Users },
-    { label: "QR Scans", value: "156", change: "+5%", icon: QrCode },
+    { label: "Total Views", value: analytics.views.toLocaleString(), icon: Eye },
+    { label: "Button Clicks", value: analytics.clicks.toLocaleString(), icon: MousePointer },
+    { label: "Leads Captured", value: analytics.leads.toLocaleString(), icon: Users },
+    { label: "QR Scans", value: analytics.scans.toLocaleString(), icon: QrCode },
   ];
 
   return (
@@ -36,45 +51,41 @@ export default function DashboardPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
       >
         <div>
-          <h1 className="text-2xl font-display font-bold text-primary dark:text-white">
+          <h1 className="text-xl sm:text-2xl font-display font-bold text-primary dark:text-white">
             Welcome back, {user?.name?.split(" ")[0]} 👋
           </h1>
           <p className="text-gray-500 dark:text-white/50 text-sm mt-1">
             Here&apos;s what&apos;s happening with your cards today.
           </p>
         </div>
-        <Link href="/dashboard/cards/new" className="btn-gradient flex items-center gap-2 text-sm">
+        <Link href="/dashboard/cards/new" className="btn-gradient flex items-center gap-2 text-sm w-fit">
           <Plus className="w-4 h-4" />
           New Card
         </Link>
       </motion.div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        {stats.map(({ label, value, change, icon: Icon }, i) => (
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+        {stats.map(({ label, value, icon: Icon }, i) => (
           <motion.div
             key={label}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.08 }}
-            className="bg-white dark:bg-dark-card rounded-2xl p-5 border border-gray-100 dark:border-white/5"
+            className="bg-white dark:bg-dark-card rounded-2xl p-4 sm:p-5 border border-gray-100 dark:border-white/5"
           >
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3">
               <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center"
                 style={{ background: `${STAT_COLORS[i]}15` }}
               >
-                <Icon className="w-5 h-5" style={{ color: STAT_COLORS[i] }} />
+                <Icon className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: STAT_COLORS[i] }} />
               </div>
-              <span className="text-green-500 text-xs font-semibold flex items-center gap-1">
-                <TrendingUp className="w-3 h-3" />
-                {change}
-              </span>
             </div>
-            <div className="text-2xl font-display font-black text-primary dark:text-white">{value}</div>
+            <div className="text-xl sm:text-2xl font-display font-black text-primary dark:text-white">{value}</div>
             <div className="text-gray-400 dark:text-white/40 text-xs mt-1">{label}</div>
           </motion.div>
         ))}
