@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
-import { db, queryOne } from "../db";
+import { db } from "../db";
 import { authenticate, AuthRequest } from "../middleware/auth";
 
 export const authRouter = Router();
@@ -26,7 +26,7 @@ authRouter.post("/register", async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Password must be at least 8 characters" });
     }
 
-    const existing = queryOne("SELECT id FROM users WHERE email = ?", [email.toLowerCase()]);
+    const existing = await db.prepare("SELECT id FROM users WHERE email = ?").getAsync(email.toLowerCase());
     if (existing) return res.status(409).json({ message: "Email already registered" });
 
     const id = uuidv4();
@@ -34,14 +34,14 @@ authRouter.post("/register", async (req: Request, res: Response) => {
     const verifyToken = uuidv4();
     const now = new Date().toISOString();
 
-    db.prepare(
+    await db.prepare(
       `INSERT INTO users (id, name, email, password_hash, email_verify_token, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`
-    ).run(id, name.trim(), email.toLowerCase().trim(), passwordHash, verifyToken, now, now);
+    ).runAsync(id, name.trim(), email.toLowerCase().trim(), passwordHash, verifyToken, now, now);
 
-    const user = queryOne<{ id: string; name: string; email: string; plan: string }>(
-      "SELECT id, name, email, plan FROM users WHERE id = ?", [id]
-    );
+    const user = await db.prepare(
+      "SELECT id, name, email, plan FROM users WHERE id = ?"
+    ).getAsync(id) as { id: string; name: string; email: string; plan: string } | undefined;
 
     const token = signToken(id);
     res.status(201).json({ message: "Account created", token, user });
@@ -60,13 +60,12 @@ authRouter.post("/login", async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Email and password required" });
     }
 
-    const user = queryOne<{
+    const user = await db.prepare(
+      "SELECT id, name, email, plan, password_hash, is_banned, is_verified FROM users WHERE email = ?"
+    ).getAsync(email.toLowerCase()) as {
       id: string; name: string; email: string; plan: string;
       password_hash: string; is_banned: number; is_verified: number;
-    }>(
-      "SELECT id, name, email, plan, password_hash, is_banned, is_verified FROM users WHERE email = ?",
-      [email.toLowerCase()]
-    );
+    } | undefined;
 
     if (!user) return res.status(401).json({ message: "Invalid email or password" });
     if (user.is_banned) return res.status(403).json({ message: "Account suspended" });
@@ -86,10 +85,9 @@ authRouter.post("/login", async (req: Request, res: Response) => {
 // GET /api/auth/me
 authRouter.get("/me", authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const user = queryOne<{ id: string; name: string; email: string; plan: string; avatar: string; is_verified: number }>(
-      "SELECT id, name, email, plan, avatar, is_verified FROM users WHERE id = ?",
-      [req.user!.id]
-    );
+    const user = await db.prepare(
+      "SELECT id, name, email, plan, avatar, is_verified FROM users WHERE id = ?"
+    ).getAsync(req.user!.id) as { id: string; name: string; email: string; plan: string; avatar: string; is_verified: number } | undefined;
     if (!user) return res.status(404).json({ message: "User not found" });
     res.json({ user: { ...user, isVerified: !!user.is_verified } });
   } catch (err) {
@@ -102,9 +100,11 @@ authRouter.get("/me", authenticate, async (req: AuthRequest, res: Response) => {
 authRouter.put("/profile", authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { name, email } = req.body;
-    db.prepare("UPDATE users SET name = ?, email = ?, updated_at = ? WHERE id = ?")
-      .run(name, email?.toLowerCase(), new Date().toISOString(), req.user!.id);
-    const user = queryOne("SELECT id, name, email, plan, avatar FROM users WHERE id = ?", [req.user!.id]);
+    await db.prepare("UPDATE users SET name = ?, email = ?, updated_at = ? WHERE id = ?")
+      .runAsync(name, email?.toLowerCase(), new Date().toISOString(), req.user!.id);
+    const user = await db.prepare(
+      "SELECT id, name, email, plan, avatar FROM users WHERE id = ?"
+    ).getAsync(req.user!.id);
     res.json({ user });
   } catch (err) {
     console.error("Profile update error:", err);
@@ -116,10 +116,10 @@ authRouter.put("/profile", authenticate, async (req: AuthRequest, res: Response)
 authRouter.post("/verify-email", async (req: Request, res: Response) => {
   try {
     const { token } = req.body;
-    const user = queryOne("SELECT id FROM users WHERE email_verify_token = ?", [token]);
+    const user = await db.prepare("SELECT id FROM users WHERE email_verify_token = ?").getAsync(token);
     if (!user) return res.status(400).json({ message: "Invalid token" });
 
-    db.prepare("UPDATE users SET is_verified = 1, email_verify_token = NULL WHERE email_verify_token = ?").run(token);
+    await db.prepare("UPDATE users SET is_verified = 1, email_verify_token = NULL WHERE email_verify_token = ?").runAsync(token);
     res.json({ message: "Email verified" });
   } catch {
     res.status(500).json({ message: "Verification failed" });
@@ -133,9 +133,9 @@ authRouter.post("/forgot-password", async (req: Request, res: Response) => {
     const resetToken = uuidv4();
     const expires = new Date(Date.now() + 3600000).toISOString();
 
-    db.prepare(
+    await db.prepare(
       "UPDATE users SET password_reset_token = ?, password_reset_expires = ? WHERE email = ?"
-    ).run(resetToken, expires, email?.toLowerCase());
+    ).runAsync(resetToken, expires, email?.toLowerCase());
 
     res.json({ message: "If that email exists, a reset link has been sent." });
   } catch {
@@ -147,16 +147,15 @@ authRouter.post("/forgot-password", async (req: Request, res: Response) => {
 authRouter.post("/reset-password", async (req: Request, res: Response) => {
   try {
     const { token, password } = req.body;
-    const user = queryOne<{ id: string }>(
-      "SELECT id FROM users WHERE password_reset_token = ? AND password_reset_expires > ?",
-      [token, new Date().toISOString()]
-    );
+    const user = await db.prepare(
+      "SELECT id FROM users WHERE password_reset_token = ? AND password_reset_expires > ?"
+    ).getAsync(token, new Date().toISOString()) as { id: string } | undefined;
     if (!user) return res.status(400).json({ message: "Invalid or expired token" });
 
     const hash = await bcrypt.hash(password, 12);
-    db.prepare(
+    await db.prepare(
       "UPDATE users SET password_hash = ?, password_reset_token = NULL, password_reset_expires = NULL WHERE id = ?"
-    ).run(hash, user.id);
+    ).runAsync(hash, user.id);
     res.json({ message: "Password reset successful" });
   } catch {
     res.status(500).json({ message: "Reset failed" });

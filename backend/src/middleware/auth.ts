@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { queryOne } from "../db";
+import { db } from "../db";
 
 export interface AuthRequest extends Request {
   user?: { id: string; email: string; plan: string; isAdmin?: boolean };
@@ -14,10 +14,9 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
-    const user = queryOne<{ id: string; email: string; plan: string; is_banned: number }>(
-      "SELECT id, email, plan, is_banned FROM users WHERE id = ?",
-      [decoded.id]
-    );
+    const user = await db.prepare(
+      "SELECT id, email, plan, is_banned FROM users WHERE id = ?"
+    ).getAsync(decoded.id) as { id: string; email: string; plan: string; is_banned: number } | undefined;
 
     if (!user) return res.status(401).json({ message: "User not found" });
     if (user.is_banned) return res.status(403).json({ message: "Account suspended" });
@@ -35,10 +34,9 @@ export async function requireAdmin(req: AuthRequest, res: Response, next: NextFu
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
-    const user = queryOne<{ id: string; email: string; plan: string; is_banned: number }>(
-      "SELECT id, email, plan, is_banned FROM users WHERE id = ?",
-      [decoded.id]
-    );
+    const user = await db.prepare(
+      "SELECT id, email, plan, is_banned FROM users WHERE id = ?"
+    ).getAsync(decoded.id) as { id: string; email: string; plan: string; is_banned: number } | undefined;
 
     if (!user) return res.status(401).json({ message: "User not found" });
     if (user.is_banned) return res.status(403).json({ message: "Account suspended" });

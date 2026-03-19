@@ -1,5 +1,5 @@
 import { Router, Response } from "express";
-import { db, queryOne } from "../db";
+import { db } from "../db";
 import { authenticate, AuthRequest } from "../middleware/auth";
 import { v4 as uuidv4 } from "uuid";
 
@@ -40,10 +40,12 @@ subscriptionsRouter.get("/plans", (_req, res: Response) => {
 // GET /api/subscriptions/status
 subscriptionsRouter.get("/status", authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const user = queryOne<{ plan: string }>("SELECT plan FROM users WHERE id = ?", [req.user!.id]);
-    const subscription = db.prepare(
+    const user = await db.prepare(
+      "SELECT plan FROM users WHERE id = ?"
+    ).getAsync(req.user!.id) as { plan: string } | undefined;
+    const subscription = await db.prepare(
       "SELECT * FROM subscriptions WHERE user_id = ? AND status = 'active' ORDER BY created_at DESC LIMIT 1"
-    ).get(req.user!.id);
+    ).getAsync(req.user!.id);
     res.json({ plan: user?.plan || "free", subscription });
   } catch {
     res.status(500).json({ message: "Failed" });
@@ -57,12 +59,12 @@ subscriptionsRouter.post("/subscribe", authenticate, async (req: AuthRequest, re
     const plan = PLANS.find((p) => p.id === planId);
     if (!plan) return res.status(400).json({ message: "Invalid plan" });
 
-    db.prepare("UPDATE users SET plan = ?, updated_at = ? WHERE id = ?")
-      .run(planId, new Date().toISOString(), req.user!.id);
+    await db.prepare("UPDATE users SET plan = ?, updated_at = ? WHERE id = ?")
+      .runAsync(planId, new Date().toISOString(), req.user!.id);
 
-    db.prepare(
+    await db.prepare(
       "INSERT INTO subscriptions (id, user_id, plan, status, starts_at) VALUES (?, ?, ?, 'active', ?)"
-    ).run(uuidv4(), req.user!.id, planId, new Date().toISOString());
+    ).runAsync(uuidv4(), req.user!.id, planId, new Date().toISOString());
 
     res.json({ message: `Upgraded to ${plan.name}`, plan: planId });
   } catch (err) {

@@ -22,55 +22,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-// ─── Migrations for posts/categories/media ───────────────────────────────────
-db.exec(`
-  CREATE TABLE IF NOT EXISTS posts (
-    id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
-    subtitle TEXT,
-    slug TEXT UNIQUE NOT NULL,
-    content TEXT,
-    excerpt TEXT,
-    featured_image TEXT,
-    images TEXT DEFAULT '[]',
-    category_id TEXT,
-    tags TEXT DEFAULT '[]',
-    status TEXT DEFAULT 'draft' CHECK(status IN ('draft','published')),
-    seo_title TEXT,
-    seo_description TEXT,
-    publish_date TEXT,
-    deleted_at TEXT,
-    created_at TEXT DEFAULT (datetime('now')),
-    updated_at TEXT DEFAULT (datetime('now'))
-  );
-  CREATE TABLE IF NOT EXISTS categories (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    slug TEXT UNIQUE NOT NULL,
-    description TEXT,
-    created_at TEXT DEFAULT (datetime('now'))
-  );
-  CREATE TABLE IF NOT EXISTS media (
-    id TEXT PRIMARY KEY,
-    filename TEXT NOT NULL,
-    original_name TEXT,
-    url TEXT NOT NULL,
-    size INTEGER,
-    mime_type TEXT,
-    created_at TEXT DEFAULT (datetime('now'))
-  );
-`);
-
-// ─── Site Settings ────────────────────────────────────────────────────────────
-db.exec(`
-  CREATE TABLE IF NOT EXISTS site_settings (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL,
-    updated_at TEXT DEFAULT (datetime('now'))
-  );
-`);
-
-// Seed default settings
+// ─── Seed default settings (runs async on startup) ───────────────────────────
 const defaultSettings: Record<string, string> = {
   site_name: "Digital Diaries",
   site_tagline: "AI-Powered Digital Identity Platform",
@@ -98,17 +50,20 @@ const defaultSettings: Record<string, string> = {
   accent_color: "#7C3AED",
 };
 
-for (const [key, value] of Object.entries(defaultSettings)) {
-  const existing = db.prepare("SELECT key FROM site_settings WHERE key = ?").get(key);
-  if (!existing) {
-    db.prepare("INSERT INTO site_settings (key, value) VALUES (?, ?)").run(key, value);
+async function seedDefaultSettings() {
+  for (const [key, value] of Object.entries(defaultSettings)) {
+    const existing = await db.prepare("SELECT key FROM site_settings WHERE key = ?").getAsync(key);
+    if (!existing) {
+      await db.prepare("INSERT INTO site_settings (key, value) VALUES (?, ?)").runAsync(key, value);
+    }
   }
 }
+seedDefaultSettings().catch(console.error);
 
-// GET /api/admin/settings
+// ─── Site Settings ────────────────────────────────────────────────────────────
 adminRouter.get("/settings", async (_req, res: Response) => {
   try {
-    const rows = db.prepare("SELECT key, value FROM site_settings").all() as { key: string; value: string }[];
+    const rows = await db.prepare("SELECT key, value FROM site_settings").allAsync() as { key: string; value: string }[];
     const settings: Record<string, string> = {};
     rows.forEach(r => { settings[r.key] = r.value; });
     res.json({ settings });
@@ -117,14 +72,14 @@ adminRouter.get("/settings", async (_req, res: Response) => {
   }
 });
 
-// PUT /api/admin/settings
 adminRouter.put("/settings", async (req: AuthRequest, res: Response) => {
   try {
     const { settings } = req.body as { settings: Record<string, string> };
     const now = new Date().toISOString();
     for (const [key, value] of Object.entries(settings)) {
-      db.prepare("INSERT INTO site_settings (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at")
-        .run(key, value, now);
+      await db.prepare(
+        "INSERT INTO site_settings (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at"
+      ).runAsync(key, value, now);
     }
     res.json({ message: "Settings saved" });
   } catch {
@@ -135,7 +90,9 @@ adminRouter.put("/settings", async (req: AuthRequest, res: Response) => {
 // ─── Templates admin ──────────────────────────────────────────────────────────
 adminRouter.get("/templates", async (_req, res: Response) => {
   try {
-    const templates = db.prepare("SELECT id, name, category, thumbnail, is_premium, tags FROM templates ORDER BY name ASC").all();
+    const templates = await db.prepare(
+      "SELECT id, name, category, thumbnail, is_premium, tags FROM templates ORDER BY name ASC"
+    ).allAsync();
     res.json({ templates });
   } catch {
     res.status(500).json({ message: "Failed" });
@@ -145,8 +102,8 @@ adminRouter.get("/templates", async (_req, res: Response) => {
 adminRouter.put("/templates/:id", async (req: AuthRequest, res: Response) => {
   try {
     const { name, category, is_premium } = req.body;
-    db.prepare("UPDATE templates SET name=?, category=?, is_premium=? WHERE id=?")
-      .run(name, category, is_premium ? 1 : 0, req.params.id);
+    await db.prepare("UPDATE templates SET name=?, category=?, is_premium=? WHERE id=?")
+      .runAsync(name, category, is_premium ? 1 : 0, req.params.id);
     res.json({ message: "Template updated" });
   } catch {
     res.status(500).json({ message: "Failed" });
@@ -156,10 +113,10 @@ adminRouter.put("/templates/:id", async (req: AuthRequest, res: Response) => {
 // ─── Card admin edit ──────────────────────────────────────────────────────────
 adminRouter.get("/cards/:id", async (req: AuthRequest, res: Response) => {
   try {
-    const card = db.prepare(
+    const card = await db.prepare(
       `SELECT c.*, u.name as owner_name, u.email as owner_email
        FROM cards c JOIN users u ON c.user_id = u.id WHERE c.id = ?`
-    ).get(req.params.id) as Record<string, unknown> | undefined;
+    ).getAsync(req.params.id) as Record<string, unknown> | undefined;
     if (!card) return res.status(404).json({ message: "Card not found" });
     card.layout = typeof card.layout === "string" ? JSON.parse(card.layout as string) : card.layout;
     res.json({ card });
@@ -171,8 +128,8 @@ adminRouter.get("/cards/:id", async (req: AuthRequest, res: Response) => {
 adminRouter.put("/cards/:id", async (req: AuthRequest, res: Response) => {
   try {
     const { layout, is_published, is_featured } = req.body;
-    db.prepare("UPDATE cards SET layout=?, is_published=?, is_featured=?, updated_at=? WHERE id=?")
-      .run(JSON.stringify(layout), is_published ? 1 : 0, is_featured ? 1 : 0, new Date().toISOString(), req.params.id);
+    await db.prepare("UPDATE cards SET layout=?, is_published=?, is_featured=?, updated_at=? WHERE id=?")
+      .runAsync(JSON.stringify(layout), is_published ? 1 : 0, is_featured ? 1 : 0, new Date().toISOString(), req.params.id);
     res.json({ message: "Card updated" });
   } catch {
     res.status(500).json({ message: "Failed" });
@@ -183,7 +140,7 @@ adminRouter.put("/cards/:id", async (req: AuthRequest, res: Response) => {
 export const publicSettingsRouter = Router();
 publicSettingsRouter.get("/public-settings", async (_req, res: Response) => {
   try {
-    const rows = db.prepare("SELECT key, value FROM site_settings").all() as { key: string; value: string }[];
+    const rows = await db.prepare("SELECT key, value FROM site_settings").allAsync() as { key: string; value: string }[];
     const settings: Record<string, string> = {};
     rows.forEach(r => { settings[r.key] = r.value; });
     res.json({ settings });
@@ -194,21 +151,21 @@ publicSettingsRouter.get("/public-settings", async (_req, res: Response) => {
 
 adminRouter.get("/stats", async (_req, res: Response) => {
   try {
-    const users = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
-    const cards = db.prepare("SELECT COUNT(*) as count FROM cards").get() as { count: number };
-    const published = db.prepare("SELECT COUNT(*) as count FROM cards WHERE is_published = 1").get() as { count: number };
-    const leads = db.prepare("SELECT COUNT(*) as count FROM leads").get() as { count: number };
-    const views = db.prepare("SELECT COUNT(*) as count FROM analytics WHERE event_type = 'view'").get() as { count: number };
-    const posts = db.prepare("SELECT COUNT(*) as count FROM posts WHERE deleted_at IS NULL").get() as { count: number };
-    const publishedPosts = db.prepare("SELECT COUNT(*) as count FROM posts WHERE status='published' AND deleted_at IS NULL").get() as { count: number };
-    const categories = db.prepare("SELECT COUNT(*) as count FROM categories").get() as { count: number };
+    const users = await db.prepare("SELECT COUNT(*) as count FROM users").getAsync() as { count: number };
+    const cards = await db.prepare("SELECT COUNT(*) as count FROM cards").getAsync() as { count: number };
+    const published = await db.prepare("SELECT COUNT(*) as count FROM cards WHERE is_published = 1").getAsync() as { count: number };
+    const leads = await db.prepare("SELECT COUNT(*) as count FROM leads").getAsync() as { count: number };
+    const views = await db.prepare("SELECT COUNT(*) as count FROM analytics WHERE event_type = 'view'").getAsync() as { count: number };
+    const posts = await db.prepare("SELECT COUNT(*) as count FROM posts WHERE deleted_at IS NULL").getAsync() as { count: number };
+    const publishedPosts = await db.prepare("SELECT COUNT(*) as count FROM posts WHERE status='published' AND deleted_at IS NULL").getAsync() as { count: number };
+    const categories = await db.prepare("SELECT COUNT(*) as count FROM categories").getAsync() as { count: number };
 
-    const recentPosts = db.prepare(
+    const recentPosts = await db.prepare(
       "SELECT id, title, slug, status, created_at FROM posts WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 5"
-    ).all();
-    const recentUsers = db.prepare(
+    ).allAsync();
+    const recentUsers = await db.prepare(
       "SELECT id, name, email, plan, created_at FROM users ORDER BY created_at DESC LIMIT 5"
-    ).all();
+    ).allAsync();
 
     res.json({
       stats: {
@@ -239,12 +196,14 @@ adminRouter.get("/users", async (req: AuthRequest, res: Response) => {
     const offset = (page - 1) * limit;
 
     const where = search ? `WHERE name LIKE '%${search}%' OR email LIKE '%${search}%'` : "";
-    const users = db.prepare(
+    const users = await db.prepare(
       `SELECT id, name, email, plan, is_verified, is_banned, created_at FROM users ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`
-    ).all(limit, offset);
-    const total = (db.prepare(`SELECT COUNT(*) as count FROM users ${where}`).get() as { count: number }).count;
+    ).allAsync(limit, offset);
+    const totalRow = await db.prepare(
+      `SELECT COUNT(*) as count FROM users ${where}`
+    ).getAsync() as { count: number };
 
-    res.json({ users, total, page });
+    res.json({ users, total: totalRow.count, page });
   } catch {
     res.status(500).json({ message: "Failed" });
   }
@@ -252,9 +211,11 @@ adminRouter.get("/users", async (req: AuthRequest, res: Response) => {
 
 adminRouter.post("/users/:id/ban", async (req: AuthRequest, res: Response) => {
   try {
-    const user = db.prepare("SELECT is_banned FROM users WHERE id = ?").get(req.params.id) as { is_banned: number } | undefined;
+    const user = await db.prepare(
+      "SELECT is_banned FROM users WHERE id = ?"
+    ).getAsync(req.params.id) as { is_banned: number } | undefined;
     if (!user) return res.status(404).json({ message: "User not found" });
-    db.prepare("UPDATE users SET is_banned = ? WHERE id = ?").run(user.is_banned ? 0 : 1, req.params.id);
+    await db.prepare("UPDATE users SET is_banned = ? WHERE id = ?").runAsync(user.is_banned ? 0 : 1, req.params.id);
     res.json({ message: "User ban status toggled" });
   } catch {
     res.status(500).json({ message: "Failed" });
@@ -263,7 +224,7 @@ adminRouter.post("/users/:id/ban", async (req: AuthRequest, res: Response) => {
 
 adminRouter.delete("/users/:id", async (req: AuthRequest, res: Response) => {
   try {
-    db.prepare("DELETE FROM users WHERE id = ?").run(req.params.id);
+    await db.prepare("DELETE FROM users WHERE id = ?").runAsync(req.params.id);
     res.json({ message: "User deleted" });
   } catch {
     res.status(500).json({ message: "Failed" });
@@ -277,15 +238,17 @@ adminRouter.get("/cards", async (req: AuthRequest, res: Response) => {
     const limit = 20;
     const offset = (page - 1) * limit;
 
-    const cards = db.prepare(
+    const cards = await db.prepare(
       `SELECT c.id, c.unique_id, c.username, c.is_published, c.is_featured, c.created_at,
               u.name as owner_name, u.email as owner_email
        FROM cards c JOIN users u ON c.user_id = u.id
        ORDER BY c.created_at DESC LIMIT ? OFFSET ?`
-    ).all(limit, offset);
-    const total = (db.prepare("SELECT COUNT(*) as count FROM cards").get() as { count: number }).count;
+    ).allAsync(limit, offset);
+    const totalRow = await db.prepare(
+      "SELECT COUNT(*) as count FROM cards"
+    ).getAsync() as { count: number };
 
-    res.json({ cards, total, page });
+    res.json({ cards, total: totalRow.count, page });
   } catch {
     res.status(500).json({ message: "Failed" });
   }
@@ -293,9 +256,11 @@ adminRouter.get("/cards", async (req: AuthRequest, res: Response) => {
 
 adminRouter.post("/cards/:id/feature", async (req: AuthRequest, res: Response) => {
   try {
-    const card = db.prepare("SELECT is_featured FROM cards WHERE id = ?").get(req.params.id) as { is_featured: number } | undefined;
+    const card = await db.prepare(
+      "SELECT is_featured FROM cards WHERE id = ?"
+    ).getAsync(req.params.id) as { is_featured: number } | undefined;
     if (!card) return res.status(404).json({ message: "Card not found" });
-    db.prepare("UPDATE cards SET is_featured = ? WHERE id = ?").run(card.is_featured ? 0 : 1, req.params.id);
+    await db.prepare("UPDATE cards SET is_featured = ? WHERE id = ?").runAsync(card.is_featured ? 0 : 1, req.params.id);
     res.json({ message: "Card feature status toggled" });
   } catch {
     res.status(500).json({ message: "Failed" });
@@ -314,14 +279,16 @@ adminRouter.get("/posts", async (req: AuthRequest, res: Response) => {
     if (category) where += ` AND p.category_id = '${category}'`;
     if (status) where += ` AND p.status = '${status}'`;
 
-    const posts = db.prepare(
+    const posts = await db.prepare(
       `SELECT p.*, c.name as category_name FROM posts p
        LEFT JOIN categories c ON p.category_id = c.id
        ${where} ORDER BY p.created_at DESC LIMIT ? OFFSET ?`
-    ).all(limit, offset);
+    ).allAsync(limit, offset);
 
-    const total = (db.prepare(`SELECT COUNT(*) as count FROM posts p ${where}`).get() as { count: number }).count;
-    res.json({ posts, total, page: parseInt(page as string) });
+    const totalRow = await db.prepare(
+      `SELECT COUNT(*) as count FROM posts p ${where}`
+    ).getAsync() as { count: number };
+    res.json({ posts, total: totalRow.count, page: parseInt(page as string) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed" });
@@ -330,11 +297,11 @@ adminRouter.get("/posts", async (req: AuthRequest, res: Response) => {
 
 adminRouter.get("/posts/:id", async (req: AuthRequest, res: Response) => {
   try {
-    const post = db.prepare(
+    const post = await db.prepare(
       `SELECT p.*, c.name as category_name FROM posts p
        LEFT JOIN categories c ON p.category_id = c.id
        WHERE p.id = ? AND p.deleted_at IS NULL`
-    ).get(req.params.id) as Record<string, unknown> | undefined;
+    ).getAsync(req.params.id) as Record<string, unknown> | undefined;
     if (!post) return res.status(404).json({ message: "Post not found" });
     post.images = JSON.parse(post.images as string || "[]");
     post.tags = JSON.parse(post.tags as string || "[]");
@@ -351,14 +318,14 @@ adminRouter.post("/posts", async (req: AuthRequest, res: Response) => {
 
     const id = uuidv4();
     const now = new Date().toISOString();
-    db.prepare(
+    await db.prepare(
       `INSERT INTO posts (id, title, subtitle, slug, content, excerpt, featured_image, images, category_id, tags, status, seo_title, seo_description, publish_date, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(id, title, subtitle || null, slug, content || null, excerpt || null, featured_image || null,
+    ).runAsync(id, title, subtitle || null, slug, content || null, excerpt || null, featured_image || null,
       JSON.stringify(images || []), category_id || null, JSON.stringify(tags || []),
       status || "draft", seo_title || null, seo_description || null, publish_date || null, now, now);
 
-    const post = db.prepare("SELECT * FROM posts WHERE id = ?").get(id);
+    const post = await db.prepare("SELECT * FROM posts WHERE id = ?").getAsync(id);
     res.status(201).json({ post });
   } catch (err: unknown) {
     if ((err as { code?: string }).code === "SQLITE_CONSTRAINT_UNIQUE") {
@@ -373,15 +340,15 @@ adminRouter.put("/posts/:id", async (req: AuthRequest, res: Response) => {
     const { title, subtitle, slug, content, excerpt, featured_image, images, category_id, tags, status, seo_title, seo_description, publish_date } = req.body;
     const now = new Date().toISOString();
 
-    db.prepare(
+    await db.prepare(
       `UPDATE posts SET title=?, subtitle=?, slug=?, content=?, excerpt=?, featured_image=?, images=?,
        category_id=?, tags=?, status=?, seo_title=?, seo_description=?, publish_date=?, updated_at=?
        WHERE id=? AND deleted_at IS NULL`
-    ).run(title, subtitle || null, slug, content || null, excerpt || null, featured_image || null,
+    ).runAsync(title, subtitle || null, slug, content || null, excerpt || null, featured_image || null,
       JSON.stringify(images || []), category_id || null, JSON.stringify(tags || []),
       status || "draft", seo_title || null, seo_description || null, publish_date || null, now, req.params.id);
 
-    const post = db.prepare("SELECT * FROM posts WHERE id = ?").get(req.params.id);
+    const post = await db.prepare("SELECT * FROM posts WHERE id = ?").getAsync(req.params.id);
     res.json({ post });
   } catch {
     res.status(500).json({ message: "Failed to update post" });
@@ -392,9 +359,9 @@ adminRouter.delete("/posts/:id", async (req: AuthRequest, res: Response) => {
   try {
     const { permanent } = req.query;
     if (permanent === "true") {
-      db.prepare("DELETE FROM posts WHERE id = ?").run(req.params.id);
+      await db.prepare("DELETE FROM posts WHERE id = ?").runAsync(req.params.id);
     } else {
-      db.prepare("UPDATE posts SET deleted_at = ? WHERE id = ?").run(new Date().toISOString(), req.params.id);
+      await db.prepare("UPDATE posts SET deleted_at = ? WHERE id = ?").runAsync(new Date().toISOString(), req.params.id);
     }
     res.json({ message: "Post deleted" });
   } catch {
@@ -405,7 +372,7 @@ adminRouter.delete("/posts/:id", async (req: AuthRequest, res: Response) => {
 // ─── Categories ───────────────────────────────────────────────────────────────
 adminRouter.get("/categories", async (_req, res: Response) => {
   try {
-    const categories = db.prepare("SELECT * FROM categories ORDER BY name ASC").all();
+    const categories = await db.prepare("SELECT * FROM categories ORDER BY name ASC").allAsync();
     res.json({ categories });
   } catch {
     res.status(500).json({ message: "Failed" });
@@ -417,8 +384,10 @@ adminRouter.post("/categories", async (req: AuthRequest, res: Response) => {
     const { name, slug, description } = req.body;
     if (!name || !slug) return res.status(400).json({ message: "Name and slug required" });
     const id = uuidv4();
-    db.prepare("INSERT INTO categories (id, name, slug, description) VALUES (?, ?, ?, ?)").run(id, name, slug, description || null);
-    const cat = db.prepare("SELECT * FROM categories WHERE id = ?").get(id);
+    await db.prepare(
+      "INSERT INTO categories (id, name, slug, description) VALUES (?, ?, ?, ?)"
+    ).runAsync(id, name, slug, description || null);
+    const cat = await db.prepare("SELECT * FROM categories WHERE id = ?").getAsync(id);
     res.status(201).json({ category: cat });
   } catch {
     res.status(500).json({ message: "Failed" });
@@ -428,8 +397,10 @@ adminRouter.post("/categories", async (req: AuthRequest, res: Response) => {
 adminRouter.put("/categories/:id", async (req: AuthRequest, res: Response) => {
   try {
     const { name, slug, description } = req.body;
-    db.prepare("UPDATE categories SET name=?, slug=?, description=? WHERE id=?").run(name, slug, description || null, req.params.id);
-    const cat = db.prepare("SELECT * FROM categories WHERE id = ?").get(req.params.id);
+    await db.prepare(
+      "UPDATE categories SET name=?, slug=?, description=? WHERE id=?"
+    ).runAsync(name, slug, description || null, req.params.id);
+    const cat = await db.prepare("SELECT * FROM categories WHERE id = ?").getAsync(req.params.id);
     res.json({ category: cat });
   } catch {
     res.status(500).json({ message: "Failed" });
@@ -438,7 +409,7 @@ adminRouter.put("/categories/:id", async (req: AuthRequest, res: Response) => {
 
 adminRouter.delete("/categories/:id", async (req: AuthRequest, res: Response) => {
   try {
-    db.prepare("DELETE FROM categories WHERE id = ?").run(req.params.id);
+    await db.prepare("DELETE FROM categories WHERE id = ?").runAsync(req.params.id);
     res.json({ message: "Category deleted" });
   } catch {
     res.status(500).json({ message: "Failed" });
@@ -448,7 +419,7 @@ adminRouter.delete("/categories/:id", async (req: AuthRequest, res: Response) =>
 // ─── Media ────────────────────────────────────────────────────────────────────
 adminRouter.get("/media", async (_req, res: Response) => {
   try {
-    const media = db.prepare("SELECT * FROM media ORDER BY created_at DESC").all();
+    const media = await db.prepare("SELECT * FROM media ORDER BY created_at DESC").allAsync();
     res.json({ media });
   } catch {
     res.status(500).json({ message: "Failed" });
@@ -464,9 +435,9 @@ adminRouter.post("/media/upload", upload.array("files", 10), async (req: AuthReq
     for (const file of files) {
       const id = uuidv4();
       const url = `${baseUrl}/uploads/${file.filename}`;
-      db.prepare(
+      await db.prepare(
         "INSERT INTO media (id, filename, original_name, url, size, mime_type) VALUES (?, ?, ?, ?, ?, ?)"
-      ).run(id, file.filename, file.originalname, url, file.size, file.mimetype);
+      ).runAsync(id, file.filename, file.originalname, url, file.size, file.mimetype);
       uploaded.push({ id, filename: file.filename, original_name: file.originalname, url, size: file.size, mime_type: file.mimetype });
     }
 
@@ -479,11 +450,13 @@ adminRouter.post("/media/upload", upload.array("files", 10), async (req: AuthReq
 
 adminRouter.delete("/media/:id", async (req: AuthRequest, res: Response) => {
   try {
-    const media = db.prepare("SELECT filename FROM media WHERE id = ?").get(req.params.id) as { filename: string } | undefined;
+    const media = await db.prepare(
+      "SELECT filename FROM media WHERE id = ?"
+    ).getAsync(req.params.id) as { filename: string } | undefined;
     if (media) {
       const filePath = path.join(uploadDir, media.filename);
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-      db.prepare("DELETE FROM media WHERE id = ?").run(req.params.id);
+      await db.prepare("DELETE FROM media WHERE id = ?").runAsync(req.params.id);
     }
     res.json({ message: "Deleted" });
   } catch {

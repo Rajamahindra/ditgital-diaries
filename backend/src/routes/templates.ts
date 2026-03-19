@@ -728,39 +728,36 @@ const TEMPLATES = [
   ...PLAYFUL_TEMPLATES,
 ];
 
-function seedTemplates() {
+async function seedTemplates() {
   const ts = now();
 
   try {
-    db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_templates_name ON templates(name)");
+    await db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_templates_name ON templates(name)");
   } catch { /* already exists */ }
 
-  const existing = db.prepare("SELECT name FROM templates").all() as { name: string }[];
+  const existing = await db.prepare("SELECT name FROM templates").allAsync() as { name: string }[];
   const existingNames = new Set(existing.map((r) => r.name));
-
-  const insert = db.prepare(
-    "INSERT INTO templates (id, name, category, thumbnail, layout, is_premium, tags, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-  );
-  const update = db.prepare(
-    "UPDATE templates SET category=?, layout=?, is_premium=?, tags=? WHERE name=?"
-  );
 
   let inserted = 0, updated = 0;
   for (const t of TEMPLATES) {
     const layout = JSON.stringify({ sections: t.sections, theme: t.theme, meta: { title: `${t.name} Card`, description: "" } });
     const tags = JSON.stringify(t.tags);
     if (existingNames.has(t.name)) {
-      update.run(t.category, layout, t.is_premium, tags, t.name);
+      await db.prepare(
+        "UPDATE templates SET category=?, layout=?, is_premium=?, tags=? WHERE name=?"
+      ).runAsync(t.category, layout, t.is_premium, tags, t.name);
       updated++;
     } else {
-      insert.run(uid(), t.name, t.category, "", layout, t.is_premium, tags, ts);
+      await db.prepare(
+        "INSERT INTO templates (id, name, category, thumbnail, layout, is_premium, tags, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+      ).runAsync(uid(), t.name, t.category, "", layout, t.is_premium, tags, ts);
       inserted++;
     }
   }
   console.log(`✅ Templates: ${inserted} inserted, ${updated} updated (${TEMPLATES.length} total)`);
 }
 
-try { seedTemplates(); } catch (e) { console.error("Template seed error:", e); }
+seedTemplates().catch(e => console.error("Template seed error:", e));
 
 // GET /api/templates
 templatesRouter.get("/", async (req, res: Response) => {
@@ -768,8 +765,8 @@ templatesRouter.get("/", async (req, res: Response) => {
     res.setHeader("Cache-Control", "no-store");
     const { category } = req.query;
     const rows = category
-      ? db.prepare("SELECT * FROM templates WHERE category = ? ORDER BY name ASC").all(category)
-      : db.prepare("SELECT * FROM templates ORDER BY name ASC").all();
+      ? await db.prepare("SELECT * FROM templates WHERE category = ? ORDER BY name ASC").allAsync(category)
+      : await db.prepare("SELECT * FROM templates ORDER BY name ASC").allAsync();
 
     const templates = (rows as Record<string, unknown>[]).map((t) => ({
       ...t,
@@ -788,7 +785,7 @@ templatesRouter.get("/", async (req, res: Response) => {
 // GET /api/templates/:id
 templatesRouter.get("/:id", async (req, res: Response) => {
   try {
-    const row = db.prepare("SELECT * FROM templates WHERE id = ?").get(req.params.id) as Record<string, unknown> | undefined;
+    const row = await db.prepare("SELECT * FROM templates WHERE id = ?").getAsync(req.params.id) as Record<string, unknown> | undefined;
     if (!row) return res.status(404).json({ message: "Template not found" });
     res.json({
       template: {

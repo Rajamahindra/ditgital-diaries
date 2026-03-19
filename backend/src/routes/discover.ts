@@ -11,18 +11,18 @@ discoverRouter.get("/", async (req, res: Response) => {
 
     let rows;
     if (q) {
-      rows = db.prepare(
+      rows = await db.prepare(
         `SELECT id, username, unique_id, layout, created_at FROM cards
          WHERE is_published = 1 AND is_active = 1
            AND (username LIKE ? OR layout LIKE ?)
          ORDER BY created_at DESC LIMIT ? OFFSET ?`
-      ).all(`%${q}%`, `%${q}%`, parseInt(limit as string), offset);
+      ).allAsync(`%${q}%`, `%${q}%`, parseInt(limit as string), offset);
     } else {
-      rows = db.prepare(
+      rows = await db.prepare(
         `SELECT id, username, unique_id, layout, created_at FROM cards
          WHERE is_published = 1 AND is_active = 1
          ORDER BY created_at DESC LIMIT ? OFFSET ?`
-      ).all(parseInt(limit as string), offset);
+      ).allAsync(parseInt(limit as string), offset);
     }
 
     const cards = (rows as Record<string, unknown>[]).map((c) => ({

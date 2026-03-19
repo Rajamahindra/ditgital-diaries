@@ -1,5 +1,5 @@
 import { Router, Response } from "express";
-import { db, queryOne } from "../db";
+import { db } from "../db";
 import { authenticate, AuthRequest } from "../middleware/auth";
 import { v4 as uuidv4 } from "uuid";
 
@@ -8,12 +8,14 @@ export const leadsRouter = Router();
 // GET /api/leads/:cardId
 leadsRouter.get("/:cardId", authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const card = queryOne("SELECT id FROM cards WHERE id = ? AND user_id = ?", [req.params.cardId, req.user!.id]);
+    const card = await db.prepare(
+      "SELECT id FROM cards WHERE id = ? AND user_id = ?"
+    ).getAsync(req.params.cardId, req.user!.id);
     if (!card) return res.status(404).json({ message: "Card not found" });
 
-    const leads = db.prepare(
+    const leads = await db.prepare(
       "SELECT * FROM leads WHERE card_id = ? ORDER BY created_at DESC"
-    ).all(req.params.cardId);
+    ).allAsync(req.params.cardId);
 
     res.json({ leads });
   } catch (err) {
@@ -28,17 +30,19 @@ leadsRouter.post("/:cardId", async (req, res: Response) => {
     const { name, phone, email, message } = req.body;
     if (!name) return res.status(400).json({ message: "Name is required" });
 
-    const card = queryOne("SELECT id FROM cards WHERE id = ? AND is_published = 1", [req.params.cardId]);
+    const card = await db.prepare(
+      "SELECT id FROM cards WHERE id = ? AND is_published = 1"
+    ).getAsync(req.params.cardId);
     if (!card) return res.status(404).json({ message: "Card not found" });
 
     const id = uuidv4();
     const now = new Date().toISOString();
 
-    db.prepare(
+    await db.prepare(
       "INSERT INTO leads (id, card_id, name, phone, email, message, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
-    ).run(id, req.params.cardId, name, phone || null, email || null, message || null, now);
+    ).runAsync(id, req.params.cardId, name, phone || null, email || null, message || null, now);
 
-    const lead = db.prepare("SELECT * FROM leads WHERE id = ?").get(id);
+    const lead = await db.prepare("SELECT * FROM leads WHERE id = ?").getAsync(id);
     res.status(201).json({ lead, message: "Message sent successfully" });
   } catch (err) {
     console.error(err);
@@ -49,11 +53,13 @@ leadsRouter.post("/:cardId", async (req, res: Response) => {
 // PATCH /api/leads/:cardId/:leadId/read
 leadsRouter.patch("/:cardId/:leadId/read", authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const card = queryOne("SELECT id FROM cards WHERE id = ? AND user_id = ?", [req.params.cardId, req.user!.id]);
+    const card = await db.prepare(
+      "SELECT id FROM cards WHERE id = ? AND user_id = ?"
+    ).getAsync(req.params.cardId, req.user!.id);
     if (!card) return res.status(404).json({ message: "Card not found" });
 
-    db.prepare("UPDATE leads SET is_read = 1 WHERE id = ? AND card_id = ?")
-      .run(req.params.leadId, req.params.cardId);
+    await db.prepare("UPDATE leads SET is_read = 1 WHERE id = ? AND card_id = ?")
+      .runAsync(req.params.leadId, req.params.cardId);
     res.json({ message: "Marked as read" });
   } catch {
     res.status(500).json({ message: "Failed" });
