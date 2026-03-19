@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: digital-diaries-backend
+    env: node
+    region: singapore
+    buildCommand: npm install && npm run build
+    startCommand: node dist/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        value: https://yourdomain.com
+      - key: ADMIN_EMAILS
+        value: admin@digitaldiaries.com
+      - key: OPENAI_API_KEY
+        value: ""
+      - key: CLOUDINARY_CLOUD_NAME
+        value: ""
+      - key: CLOUDINARY_API_KEY
+        value: ""
+      - key: CLOUDINARY_API_SECRET
+        value: ""
