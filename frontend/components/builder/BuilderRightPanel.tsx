@@ -28,6 +28,26 @@ function ColorRow({ label, themeKey }: { label: string; themeKey: string }) {
   );
 }
 
+function compressImage(file: File, maxWidth: number, quality: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, maxWidth / img.width);
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("canvas failed"));
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
 function ImageUploadField({ label, value, onChange, icon, aspectClass }: {
   label: string;
   value: string;
@@ -36,20 +56,30 @@ function ImageUploadField({ label, value, onChange, icon, aspectClass }: {
   aspectClass: string;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => onChange(ev.target?.result as string);
-    reader.readAsDataURL(file);
+
+    setUploading(true);
+    try {
+      // Always compress — profile photo max 300px, banner max 900px wide, 70% quality
+      const maxWidth = label.includes("Banner") ? 900 : 300;
+      const compressed = await compressImage(file, maxWidth, 0.7);
+      onChange(compressed);
+    } finally {
+      setUploading(false);
+      // reset input so same file can be re-selected
+      if (fileRef.current) fileRef.current.value = "";
+    }
   }
 
   return (
     <div>
       <label className={labelCls}>{label}</label>
       <div
-        onClick={() => fileRef.current?.click()}
+        onClick={() => !uploading && fileRef.current?.click()}
         className={`relative w-full ${aspectClass} rounded-xl border-2 border-dashed border-gray-200 dark:border-white/10 overflow-hidden cursor-pointer group hover:border-secondary/50 transition-all`}
       >
         {value ? (
@@ -65,6 +95,11 @@ function ImageUploadField({ label, value, onChange, icon, aspectClass }: {
               <X className="w-3 h-3 text-white" />
             </button>
           </>
+        ) : uploading ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-gray-300 dark:text-white/20">
+            <div className="w-5 h-5 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
+            <span className="text-xs">Uploading...</span>
+          </div>
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-gray-300 dark:text-white/20">
             {icon}
