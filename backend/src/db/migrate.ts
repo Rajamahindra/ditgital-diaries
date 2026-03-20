@@ -106,6 +106,10 @@ export async function runMigrations() {
   await db.exec(`CREATE INDEX IF NOT EXISTS idx_leads_card_id ON leads(card_id)`);
   await db.exec(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
 
+  // Ensure password reset columns exist (safe to run multiple times)
+  try { await db.exec(`ALTER TABLE users ADD COLUMN password_reset_token TEXT`); } catch {}
+  try { await db.exec(`ALTER TABLE users ADD COLUMN password_reset_expires TEXT`); } catch {}
+
   await db.exec(`
     CREATE TABLE IF NOT EXISTS posts (
       id TEXT PRIMARY KEY,

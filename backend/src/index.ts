@@ -18,6 +18,7 @@ import { discoverRouter } from "./routes/discover";
 import { subscriptionsRouter } from "./routes/subscriptions";
 import { adminRouter, publicSettingsRouter } from "./routes/admin";
 import { paymentsRouter } from "./routes/payments";
+import { uploadRouter } from "./routes/upload";
 import { errorHandler } from "./middleware/errorHandler";
 
 const app = express();
@@ -42,8 +43,8 @@ app.use(cors({
 }));
 app.use(compression());
 app.use(morgan("dev"));
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "20mb" }));
+app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
 // Rate limiting
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true });
@@ -65,6 +66,7 @@ app.use("/api/subscriptions", subscriptionsRouter);
 app.use("/api/admin", publicSettingsRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/payments", paymentsRouter);
+app.use("/api/upload", uploadRouter);
 
 // Health check
 app.get("/health", (_, res) => res.json({ status: "ok", timestamp: new Date().toISOString() }));

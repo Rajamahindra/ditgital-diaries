@@ -28,12 +28,14 @@ function ColorRow({ label, themeKey }: { label: string; themeKey: string }) {
   );
 }
 
-function compressImage(file: File, maxWidth: number, quality: number): Promise<string> {
+async function uploadImageFallback(file: File): Promise<string> {
+  // Compress to base64 as last resort (small size)
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
-      const scale = Math.min(1, maxWidth / img.width);
+      const maxW = 400;
+      const scale = Math.min(1, maxW / img.width);
       const canvas = document.createElement("canvas");
       canvas.width = img.width * scale;
       canvas.height = img.height * scale;
@@ -41,7 +43,7 @@ function compressImage(file: File, maxWidth: number, quality: number): Promise<s
       if (!ctx) return reject(new Error("canvas failed"));
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL("image/jpeg", quality));
+      resolve(canvas.toDataURL("image/jpeg", 0.6));
     };
     img.onerror = reject;
     img.src = url;
@@ -64,13 +66,38 @@ function ImageUploadField({ label, value, onChange, icon, aspectClass }: {
 
     setUploading(true);
     try {
-      // Always compress — profile photo max 300px, banner max 900px wide, 70% quality
-      const maxWidth = label.includes("Banner") ? 900 : 300;
-      const compressed = await compressImage(file, maxWidth, 0.7);
-      onChange(compressed);
+      // Try to upload to backend first, fallback to compressed base64
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const { default: Cookies } = await import("js-cookie");
+      const token = Cookies.get("dd_token");
+
+      const form = new FormData();
+      form.append("image", file);
+
+      const res = await fetch(`${apiUrl}/api/upload/image`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        onChange(data.url);
+      } else {
+        // Fallback: compress and store as base64 (small)
+        const b64 = await uploadImageFallback(file);
+        onChange(b64);
+      }
+    } catch {
+      // Final fallback
+      try {
+        const b64 = await uploadImageFallback(file);
+        onChange(b64);
+      } catch {
+        // ignore
+      }
     } finally {
       setUploading(false);
-      // reset input so same file can be re-selected
       if (fileRef.current) fileRef.current.value = "";
     }
   }
