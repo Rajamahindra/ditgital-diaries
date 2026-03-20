@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
+import nodemailer from "nodemailer";
 import { db } from "../db";
 import { authenticate, AuthRequest } from "../middleware/auth";
 
@@ -12,6 +13,39 @@ const JWT_EXPIRES = "30d";
 
 function signToken(userId: string) {
   return jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
+}
+
+function getMailer() {
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+}
+
+async function sendOTPEmail(email: string, otp: string, name: string) {
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.log(`[DEV] OTP for ${email}: ${otp}`);
+    return;
+  }
+  const mailer = getMailer();
+  await mailer.sendMail({
+    from: `"Digital Diaries" <${process.env.SMTP_USER}>`,
+    to: email,
+    subject: "Your Password Reset OTP — Digital Diaries",
+    html: `
+      <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f8fafc;border-radius:16px;">
+        <h2 style="color:#0F172A;margin-bottom:8px;">Password Reset</h2>
+        <p style="color:#64748b;">Hi ${name}, use the OTP below to reset your password. It expires in 10 minutes.</p>
+        <div style="background:#0F172A;color:#fff;font-size:36px;font-weight:900;letter-spacing:12px;text-align:center;padding:24px;border-radius:12px;margin:24px 0;">
+          ${otp}
+        </div>
+        <p style="color:#94a3b8;font-size:13px;">If you didn't request this, ignore this email.</p>
+      </div>
+    `,
+  });
 }
 
 // POST /api/auth/register
@@ -126,20 +160,56 @@ authRouter.post("/verify-email", async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/auth/forgot-password
+// POST /api/auth/forgot-password — sends OTP to email
 authRouter.post("/forgot-password", async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
-    const resetToken = uuidv4();
-    const expires = new Date(Date.now() + 3600000).toISOString();
+    if (!email) return res.status(400).json({ message: "Email required" });
+
+    const user = await db.prepare(
+      "SELECT id, name, email FROM users WHERE email = ?"
+    ).getAsync(email.toLowerCase()) as { id: string; name: string; email: string } | undefined;
+
+    // Always return success to prevent email enumeration
+    if (!user) return res.json({ message: "If that email exists, an OTP has been sent." });
+
+    const otp = String(Math.floor(100000 + Math.random() * 900000)); // 6-digit OTP
+    const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
 
     await db.prepare(
-      "UPDATE users SET password_reset_token = ?, password_reset_expires = ? WHERE email = ?"
-    ).runAsync(resetToken, expires, email?.toLowerCase());
+      "UPDATE users SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?"
+    ).runAsync(otp, expires, user.id);
 
-    res.json({ message: "If that email exists, a reset link has been sent." });
+    await sendOTPEmail(user.email, otp, user.name);
+    res.json({ message: "If that email exists, an OTP has been sent." });
+  } catch (err) {
+    console.error("Forgot password error:", err);
+    res.status(500).json({ message: "Failed to send OTP" });
+  }
+});
+
+// POST /api/auth/verify-otp — verify OTP, return a short-lived reset token
+authRouter.post("/verify-otp", async (req: Request, res: Response) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ message: "Email and OTP required" });
+
+    const user = await db.prepare(
+      "SELECT id FROM users WHERE email = ? AND password_reset_token = ? AND password_reset_expires > ?"
+    ).getAsync(email.toLowerCase(), otp, new Date().toISOString()) as { id: string } | undefined;
+
+    if (!user) return res.status(400).json({ message: "Invalid or expired OTP" });
+
+    // Issue a short-lived reset token
+    const resetToken = uuidv4();
+    const expires = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    await db.prepare(
+      "UPDATE users SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?"
+    ).runAsync(resetToken, expires, user.id);
+
+    res.json({ resetToken });
   } catch {
-    res.status(500).json({ message: "Failed" });
+    res.status(500).json({ message: "OTP verification failed" });
   }
 });
 
@@ -147,6 +217,9 @@ authRouter.post("/forgot-password", async (req: Request, res: Response) => {
 authRouter.post("/reset-password", async (req: Request, res: Response) => {
   try {
     const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ message: "Token and password required" });
+    if (password.length < 8) return res.status(400).json({ message: "Password must be at least 8 characters" });
+
     const user = await db.prepare(
       "SELECT id FROM users WHERE password_reset_token = ? AND password_reset_expires > ?"
     ).getAsync(token, new Date().toISOString()) as { id: string } | undefined;

@@ -6,24 +6,32 @@ export const discoverRouter = Router();
 // GET /api/discover
 discoverRouter.get("/", async (req, res: Response) => {
   try {
-    const { q, page = "1", limit = "20" } = req.query;
+    const { q, location, category, page = "1", limit = "20" } = req.query;
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
 
-    let rows;
+    // Build WHERE conditions — search inside layout JSON for profession/name/company/location
+    const conditions: string[] = ["is_published = 1", "is_active = 1"];
+    const params: unknown[] = [];
+
     if (q) {
-      rows = await db.prepare(
-        `SELECT id, username, unique_id, layout, created_at FROM cards
-         WHERE is_published = 1 AND is_active = 1
-           AND (username LIKE ? OR layout LIKE ?)
-         ORDER BY created_at DESC LIMIT ? OFFSET ?`
-      ).allAsync(`%${q}%`, `%${q}%`, parseInt(limit as string), offset);
-    } else {
-      rows = await db.prepare(
-        `SELECT id, username, unique_id, layout, created_at FROM cards
-         WHERE is_published = 1 AND is_active = 1
-         ORDER BY created_at DESC LIMIT ? OFFSET ?`
-      ).allAsync(parseInt(limit as string), offset);
+      conditions.push("(username LIKE ? OR layout LIKE ?)");
+      params.push(`%${q}%`, `%${q}%`);
     }
+    if (location) {
+      conditions.push("layout LIKE ?");
+      params.push(`%${location}%`);
+    }
+    if (category && category !== "All") {
+      conditions.push("layout LIKE ?");
+      params.push(`%${category}%`);
+    }
+
+    const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+    params.push(parseInt(limit as string), offset);
+
+    const rows = await db.prepare(
+      `SELECT id, username, unique_id, layout, created_at FROM cards ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`
+    ).allAsync(...params);
 
     const cards = (rows as Record<string, unknown>[]).map((c) => ({
       ...c,

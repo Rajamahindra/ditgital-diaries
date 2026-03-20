@@ -37,6 +37,8 @@ export const authAPI = {
     api.post("/auth/verify-email", { token }),
   forgotPassword: (email: string) =>
     api.post("/auth/forgot-password", { email }),
+  verifyOTP: (email: string, otp: string) =>
+    api.post("/auth/verify-otp", { email, otp }),
   resetPassword: (token: string, password: string) =>
     api.post("/auth/reset-password", { token, password }),
   me: () => api.get("/auth/me"),
@@ -92,6 +94,13 @@ export const subscriptionsAPI = {
   getPlans: () => api.get("/subscriptions/plans"),
   subscribe: (planId: string) => api.post("/subscriptions/subscribe", { planId }),
   getStatus: () => api.get("/subscriptions/status"),
+};
+
+// ─── Payments (Razorpay) ──────────────────────────────────────────────────────
+export const paymentsAPI = {
+  createOrder: (planId: string) => api.post("/payments/create-order", { planId }),
+  verify: (data: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string; planId: string }) =>
+    api.post("/payments/verify", data),
 };
 
 // ─── Admin ────────────────────────────────────────────────────────────────────

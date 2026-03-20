@@ -17,6 +17,7 @@ import { aiRouter } from "./routes/ai";
 import { discoverRouter } from "./routes/discover";
 import { subscriptionsRouter } from "./routes/subscriptions";
 import { adminRouter, publicSettingsRouter } from "./routes/admin";
+import { paymentsRouter } from "./routes/payments";
 import { errorHandler } from "./middleware/errorHandler";
 
 const app = express();
@@ -63,6 +64,7 @@ app.use("/api/discover", discoverRouter);
 app.use("/api/subscriptions", subscriptionsRouter);
 app.use("/api/admin", publicSettingsRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/payments", paymentsRouter);
 
 // Health check
 app.get("/health", (_, res) => res.json({ status: "ok", timestamp: new Date().toISOString() }));

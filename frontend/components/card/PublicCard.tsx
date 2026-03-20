@@ -58,6 +58,7 @@ export function PublicCard({ card }: { card: Card }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [showQR, setShowQR] = useState(false);
+  const [qrDesign, setQrDesign] = useState<"classic" | "rounded" | "branded">("classic");
   const [showDownload, setShowDownload] = useState(false);
 
   const cardUrl = getCardUrl(card.username);
@@ -204,16 +205,56 @@ export function PublicCard({ card }: { card: Card }) {
             animate={{ scale: 1, opacity: 1 }}
             className="bg-white dark:bg-dark-card rounded-2xl p-8 max-w-xs w-full text-center shadow-2xl"
           >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-primary dark:text-white font-bold">Scan QR Code</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-primary dark:text-white font-bold">QR Code</h3>
               <button onClick={() => setShowQR(false)} className="text-gray-400 hover:text-primary dark:hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {/* QR Design selector */}
+            <div className="flex gap-2 justify-center mb-4">
+              {(["classic", "rounded", "branded"] as const).map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setQrDesign(d)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${qrDesign === d ? "bg-secondary text-white" : "border border-gray-200 dark:border-white/10 text-gray-500 dark:text-white/50"}`}
+                >
+                  {d.charAt(0).toUpperCase() + d.slice(1)}
+                </button>
+              ))}
+            </div>
+
             {qrDataUrl && (
-              <img src={qrDataUrl} alt="QR Code" className="w-48 h-48 mx-auto rounded-xl mb-4" />
+              <div className={`inline-block p-3 mb-4 ${
+                qrDesign === "rounded" ? "rounded-2xl bg-gradient-to-br from-blue-500 to-violet-600 p-4" :
+                qrDesign === "branded" ? "rounded-xl bg-primary p-4" :
+                "rounded-xl bg-white border border-gray-100"
+              }`}>
+                <img
+                  src={qrDataUrl}
+                  alt="QR Code"
+                  className={`w-44 h-44 ${qrDesign === "rounded" ? "rounded-xl" : ""}`}
+                  style={qrDesign === "branded" ? { filter: "invert(1)" } : {}}
+                />
+                {qrDesign === "branded" && (
+                  <p className="text-white text-xs font-bold mt-2 tracking-wider">DIGITAL DIARIES</p>
+                )}
+              </div>
             )}
-            <p className="text-gray-400 dark:text-white/40 text-xs break-all">{cardUrl}</p>
+
+            <p className="text-gray-400 dark:text-white/40 text-xs break-all mb-4">{cardUrl}</p>
+            <button
+              onClick={() => {
+                const a = document.createElement("a");
+                a.href = qrDataUrl;
+                a.download = `${card.username}-qr.png`;
+                a.click();
+              }}
+              className="w-full btn-gradient py-2.5 text-sm"
+            >
+              Download QR
+            </button>
           </motion.div>
         </div>
       )}
