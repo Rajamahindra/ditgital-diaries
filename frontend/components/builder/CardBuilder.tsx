@@ -76,8 +76,19 @@ export function CardBuilder() {
         await cardsAPI.update(activeCard.id, { layout });
         setDirty(false);
       }
-      await cardsAPI.publish(activeCard.id);
-      toast.success("Card published! Live URL is ready.");
+      const res = await cardsAPI.publish(activeCard.id);
+      const isNowPublished = res.data.card.isPublished;
+      if (isNowPublished) {
+        const url = `${window.location.origin}/card/${activeCard.username}`;
+        toast.success(
+          <span>
+            Card is LIVE! <a href={url} target="_blank" rel="noreferrer" className="underline font-bold">{url}</a>
+          </span>,
+          { duration: 6000 }
+        );
+      } else {
+        toast.success("Card unpublished");
+      }
     } catch {
       toast.error("Failed to publish");
     }

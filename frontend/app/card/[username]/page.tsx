@@ -2,11 +2,14 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PublicCard } from "@/components/card/PublicCard";
 
+// Always use the real backend URL — env var may not be set on Vercel at build time
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://ditgital-diaries.onrender.com";
+
 async function getCard(username: string) {
   try {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/cards/public/${username}`,
-      { next: { revalidate: 60 } }
+      `${BACKEND_URL}/api/cards/public/${username}`,
+      { cache: "no-store" } // always fresh — no stale cache
     );
     if (!res.ok) return null;
     const data = await res.json();
