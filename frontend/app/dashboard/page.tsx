@@ -22,15 +22,18 @@ export default function DashboardPage() {
       .then((res) => {
         const c = res.data.cards || [];
         setCards(c);
-        // fetch real analytics if cards exist
+        // fetch analytics for the first card
         if (c.length > 0) {
-          cardsAPI.getAnalytics?.()
-            .then((r: { data: { views?: number; clicks?: number; leads?: number; scans?: number } }) => setAnalytics({
-              views: r.data.views || 0,
-              clicks: r.data.clicks || 0,
-              leads: r.data.leads || 0,
-              scans: r.data.scans || 0,
-            }))
+          cardsAPI.getAnalytics(c[0].id)
+            .then((r) => {
+              const a = r.data.analytics as { total_views?: number; button_clicks?: number; qr_scans?: number } | undefined;
+              setAnalytics({
+                views: Number(a?.total_views) || 0,
+                clicks: Number(a?.button_clicks) || 0,
+                leads: 0,
+                scans: Number(a?.qr_scans) || 0,
+              });
+            })
             .catch(() => {});
         }
       })
