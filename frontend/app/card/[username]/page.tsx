@@ -1,50 +1,48 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PublicCard } from "@/components/card/PublicCard";
+import { ClientCardLoader } from "@/components/card/ClientCardLoader";
 
-// Always use the real backend URL — env var may not be set on Vercel at build time
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://ditgital-diaries.onrender.com";
+// Server-side backend URL
+const BACKEND_URL =
+  process.env.BACKEND_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://ditgital-diaries.onrender.com";
 
 async function getCard(username: string) {
+  const url = `${BACKEND_URL}/api/cards/public/${username}`;
   try {
-    const res = await fetch(
-      `${BACKEND_URL}/api/cards/public/${username}`,
-      { cache: "no-store" } // always fresh — no stale cache
-    );
+    const res = await fetch(url, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    });
     if (!res.ok) return null;
     const data = await res.json();
-    return data.card;
+    return data.card ?? null;
   } catch {
     return null;
   }
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { username: string };
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: { username: string } }): Promise<Metadata> {
   const card = await getCard(params.username);
-  if (!card) return { title: "Card Not Found" };
-
+  if (!card) return { title: "Digital Card | Digital Diaries" };
   const profile = card.layout?.sections?.find((s: { type: string }) => s.type === "profile");
   const name = profile?.data?.name || card.username;
-  const profession = profile?.data?.profession || "";
-
   return {
-    title: `${name} — ${profession} | Digital Diaries`,
-    description: profile?.data?.bio || `${name}'s digital card on Digital Diaries`,
-    openGraph: {
-      title: `${name} | Digital Diaries`,
-      description: profile?.data?.bio,
-      type: "profile",
-    },
+    title: `${name} | Digital Diaries`,
+    description: profile?.data?.bio || `${name}'s digital card`,
   };
 }
 
 export default async function CardPage({ params }: { params: { username: string } }) {
   const card = await getCard(params.username);
-  if (!card) notFound();
+
+  // If server-side fetch failed (Render sleeping, timeout, etc.)
+  // fall back to client-side fetch which will retry
+  if (!card) {
+    return <ClientCardLoader username={params.username} />;
+  }
 
   return <PublicCard card={card} />;
 }
