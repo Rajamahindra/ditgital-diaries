@@ -29,12 +29,12 @@ function ColorRow({ label, themeKey }: { label: string; themeKey: string }) {
 }
 
 async function uploadImageFallback(file: File): Promise<string> {
-  // Compress to base64 as last resort (small size)
+  // Compress aggressively to keep base64 small (max 200px, 0.5 quality ~5-15KB)
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
-      const maxW = 400;
+      const maxW = 200;
       const scale = Math.min(1, maxW / img.width);
       const canvas = document.createElement("canvas");
       canvas.width = img.width * scale;
@@ -43,7 +43,7 @@ async function uploadImageFallback(file: File): Promise<string> {
       if (!ctx) return reject(new Error("canvas failed"));
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL("image/jpeg", 0.6));
+      resolve(canvas.toDataURL("image/jpeg", 0.5));
     };
     img.onerror = reject;
     img.src = url;

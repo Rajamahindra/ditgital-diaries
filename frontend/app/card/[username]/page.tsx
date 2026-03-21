@@ -1,9 +1,8 @@
 import { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { PublicCard } from "@/components/card/PublicCard";
 import { ClientCardLoader } from "@/components/card/ClientCardLoader";
 
-// Server-side backend URL
+// Server-side backend URL (set BACKEND_URL in Vercel env vars)
 const BACKEND_URL =
   process.env.BACKEND_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
@@ -14,7 +13,7 @@ async function getCard(username: string) {
   try {
     const res = await fetch(url, {
       cache: "no-store",
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) return null;
     const data = await res.json();
@@ -39,7 +38,7 @@ export default async function CardPage({ params }: { params: { username: string 
   const card = await getCard(params.username);
 
   // If server-side fetch failed (Render sleeping, timeout, etc.)
-  // fall back to client-side fetch which will retry
+  // fall back to client-side fetch which will retry with longer waits
   if (!card) {
     return <ClientCardLoader username={params.username} />;
   }

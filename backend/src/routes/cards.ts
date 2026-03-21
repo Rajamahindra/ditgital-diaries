@@ -53,7 +53,14 @@ cardsRouter.get("/public/:username", async (req, res: Response) => {
     const row = await db.prepare(
       "SELECT * FROM cards WHERE username = ? AND CAST(is_published AS INTEGER) = 1 AND CAST(is_active AS INTEGER) = 1"
     ).getAsync(req.params.username) as Record<string, unknown> | undefined;
-    if (!row) return res.status(404).json({ message: "Card not found" });
+    if (!row) {
+      // Try without is_active check (some old cards may have is_active = 0 by default)
+      const rowAny = await db.prepare(
+        "SELECT * FROM cards WHERE username = ? AND CAST(is_published AS INTEGER) = 1"
+      ).getAsync(req.params.username) as Record<string, unknown> | undefined;
+      if (!rowAny) return res.status(404).json({ message: "Card not found" });
+      return res.json({ card: parseCard(rowAny) });
+    }
     res.json({ card: parseCard(row) });
   } catch (err) {
     console.error(err);
@@ -136,6 +143,41 @@ cardsRouter.post("/", authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
+// Strip large base64 data URLs from layout to prevent DB size issues
+function sanitizeLayout(layout: unknown): unknown {
+  if (!layout || typeof layout !== "object") return layout;
+  const str = JSON.stringify(layout);
+  // Replace any base64 data URLs longer than 10KB with empty string
+  const sanitized = str.replace(/"data:image\/[^;]+;base64,[A-Za-z0-9+/=]{10240,}"/g, '""');
+  try {
+    return JSON.parse(sanitized);
+  } catch {
+    return layout;
+  }
+}
+
+// POST /api/cards/cleanup-base64 — strips large base64 images from all cards (fixes Turso size issues)
+cardsRouter.post("/cleanup-base64", async (_req, res: Response) => {
+  try {
+    const rows = await db.prepare("SELECT id, layout FROM cards").allAsync() as { id: string; layout: string }[];
+    let fixed = 0;
+    for (const row of rows) {
+      if (!row.layout) continue;
+      const original = row.layout;
+      // Check if layout contains large base64
+      if (!/data:image\/[^;]+;base64,[A-Za-z0-9+/=]{10240,}/.test(original)) continue;
+      const cleaned = original.replace(/"data:image\/[^;]+;base64,[A-Za-z0-9+/=]{10240,}"/g, '""');
+      await db.prepare("UPDATE cards SET layout = ?, updated_at = ? WHERE id = ?")
+        .runAsync(cleaned, new Date().toISOString(), row.id);
+      fixed++;
+    }
+    res.json({ message: `Cleaned ${fixed} cards`, fixed });
+  } catch (err) {
+    console.error("Cleanup error:", err);
+    res.status(500).json({ message: "Cleanup failed" });
+  }
+});
+
 // PUT /api/cards/:id
 cardsRouter.put("/:id", authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -146,9 +188,17 @@ cardsRouter.put("/:id", authenticate, async (req: AuthRequest, res: Response) =>
     ).getAsync(req.params.id, req.user!.id);
     if (!existing) return res.status(404).json({ message: "Card not found" });
 
+    const cleanLayout = sanitizeLayout(layout);
+    const layoutStr = JSON.stringify(cleanLayout);
+
+    // Warn if layout is still large (Turso free tier ~1MB row limit)
+    if (layoutStr.length > 800000) {
+      return res.status(413).json({ message: "Card data too large. Please use Cloudinary for image uploads." });
+    }
+
     await db.prepare(
       "UPDATE cards SET layout = ?, updated_at = ? WHERE id = ? AND user_id = ?"
-    ).runAsync(JSON.stringify(layout), new Date().toISOString(), req.params.id, req.user!.id);
+    ).runAsync(layoutStr, new Date().toISOString(), req.params.id, req.user!.id);
 
     const row = await db.prepare("SELECT * FROM cards WHERE id = ?").getAsync(req.params.id) as Record<string, unknown>;
     res.json({ card: parseCard(row) });

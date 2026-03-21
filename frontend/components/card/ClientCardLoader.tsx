@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, RefreshCw } from "lucide-react";
 import { PublicCard } from "./PublicCard";
 import Link from "next/link";
 
@@ -12,39 +12,41 @@ export function ClientCardLoader({ username }: { username: string }) {
   const [status, setStatus] = useState<"loading" | "notfound" | "error">("loading");
   const [attempt, setAttempt] = useState(0);
 
-  useEffect(() => {
-    let cancelled = false;
+  const load = async () => {
     setStatus("loading");
+    setAttempt(0);
 
-    async function load() {
-      // Try up to 3 times with increasing delays (handles Render cold start)
-      for (let i = 0; i <= 2; i++) {
-        if (i > 0) await new Promise((r) => setTimeout(r, 3000 * i));
-        try {
-          const res = await fetch(`${API_URL}/api/cards/public/${username}`, {
-            cache: "no-store",
-          });
-          if (res.status === 404) {
-            if (!cancelled) setStatus("notfound");
+    // Try up to 4 times with increasing delays (handles Render cold start ~30s)
+    for (let i = 0; i <= 3; i++) {
+      if (i > 0) {
+        setAttempt(i);
+        await new Promise((r) => setTimeout(r, i === 1 ? 4000 : i === 2 ? 6000 : 8000));
+      }
+      try {
+        const res = await fetch(`${API_URL}/api/cards/public/${username}`, {
+          cache: "no-store",
+        });
+        if (res.status === 404) {
+          setStatus("notfound");
+          return;
+        }
+        if (res.ok) {
+          const data = await res.json();
+          if (data.card) {
+            setCard(data.card);
             return;
           }
-          if (res.ok) {
-            const data = await res.json();
-            if (!cancelled && data.card) {
-              setCard(data.card);
-              return;
-            }
-          }
-        } catch {
-          // retry
         }
-        if (!cancelled) setAttempt(i + 1);
+      } catch {
+        // retry
       }
-      if (!cancelled) setStatus("error");
     }
+    setStatus("error");
+  };
 
+  useEffect(() => {
     load();
-    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [username]);
 
   if (card) {
@@ -66,6 +68,23 @@ export function ClientCardLoader({ username }: { username: string }) {
     );
   }
 
+  if (status === "error") {
+    return (
+      <div className="min-h-screen bg-gradient-hero flex items-center justify-center px-4">
+        <div className="text-center">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-accent mx-auto flex items-center justify-center mb-6">
+            <Sparkles className="w-10 h-10 text-white" />
+          </div>
+          <h1 className="text-2xl font-display font-black text-white mb-3">Server is waking up</h1>
+          <p className="text-white/50 mb-8">Our server takes a moment to start. Please try again.</p>
+          <button onClick={load} className="btn-gradient inline-flex items-center gap-2">
+            <RefreshCw className="w-4 h-4" /> Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-hero flex items-center justify-center px-4">
       <div className="text-center">
@@ -75,7 +94,7 @@ export function ClientCardLoader({ username }: { username: string }) {
         <Loader2 className="w-8 h-8 text-white/50 animate-spin mx-auto mb-3" />
         <p className="text-white font-semibold">Loading card...</p>
         {attempt > 0 && (
-          <p className="text-white/40 text-sm mt-1">Waking up server... ({attempt}/3)</p>
+          <p className="text-white/40 text-sm mt-1">Waking up server... ({attempt}/4)</p>
         )}
       </div>
     </div>
