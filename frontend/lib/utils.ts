@@ -11,6 +11,10 @@ export function formatCardId(id: number): string {
 }
 
 export function getCardUrl(username: string): string {
+  // In browser, use current origin so it always works regardless of env vars
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/card/${username}`;
+  }
   const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   return `${base}/card/${username}`;
 }
