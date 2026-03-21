@@ -27,9 +27,9 @@ function parseCard(row: Record<string, unknown>) {
   return {
     ...row,
     layout: typeof row.layout === "string" ? JSON.parse(row.layout as string) : row.layout,
-    isPublished: !!row.is_published,
-    isActive: !!row.is_active,
-    isFeatured: !!row.is_featured,
+    isPublished: row.is_published === 1 || row.is_published === 1n || row.is_published === "1" || row.is_published === true,
+    isActive: row.is_active === 1 || row.is_active === 1n || row.is_active === "1" || row.is_active === true,
+    isFeatured: row.is_featured === 1 || row.is_featured === 1n || row.is_featured === "1" || row.is_featured === true,
     uniqueId: row.unique_id,
   };
 }
@@ -51,7 +51,7 @@ cardsRouter.get("/", authenticate, async (req: AuthRequest, res: Response) => {
 cardsRouter.get("/public/:username", async (req, res: Response) => {
   try {
     const row = await db.prepare(
-      "SELECT * FROM cards WHERE username = ? AND is_published = 1 AND is_active = 1"
+      "SELECT * FROM cards WHERE username = ? AND CAST(is_published AS INTEGER) = 1 AND CAST(is_active AS INTEGER) = 1"
     ).getAsync(req.params.username) as Record<string, unknown> | undefined;
     if (!row) return res.status(404).json({ message: "Card not found" });
     res.json({ card: parseCard(row) });
@@ -163,10 +163,11 @@ cardsRouter.post("/:id/publish", authenticate, async (req: AuthRequest, res: Res
   try {
     const row = await db.prepare(
       "SELECT id, is_published FROM cards WHERE id = ? AND user_id = ?"
-    ).getAsync(req.params.id, req.user!.id) as { id: string; is_published: number } | undefined;
+    ).getAsync(req.params.id, req.user!.id) as { id: string; is_published: number | bigint | string } | undefined;
     if (!row) return res.status(404).json({ message: "Card not found" });
 
-    const newState = row.is_published ? 0 : 1;
+    const isCurrentlyPublished = row.is_published === 1 || row.is_published === 1n || row.is_published === "1";
+    const newState = isCurrentlyPublished ? 0 : 1;
     await db.prepare("UPDATE cards SET is_published = ?, updated_at = ? WHERE id = ?")
       .runAsync(newState, new Date().toISOString(), req.params.id);
 
