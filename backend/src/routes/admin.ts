@@ -3,24 +3,35 @@ import { db } from "../db";
 import { requireAdmin, AuthRequest } from "../middleware/auth";
 import { v4 as uuidv4 } from "uuid";
 import multer from "multer";
-import path from "path";
-import fs from "fs";
+import { v2 as cloudinary } from "cloudinary";
 
 export const adminRouter = Router();
 adminRouter.use(requireAdmin);
 
-// ─── Media upload setup ───────────────────────────────────────────────────────
-const uploadDir = path.join(__dirname, "../../../uploads");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+// ─── Media upload setup (Cloudinary) ─────────────────────────────────────────
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${uuidv4()}${ext}`);
-  },
-});
-const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
+function isCloudinaryConfigured() {
+  return !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
+}
+
+async function uploadToCloudinary(buffer: Buffer, mimetype: string, originalName: string): Promise<string> {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: "digital-diaries/media", resource_type: "auto", public_id: `${uuidv4()}-${originalName.replace(/\.[^.]+$/, "")}` },
+      (err, result) => {
+        if (err || !result) return reject(err || new Error("Upload failed"));
+        resolve(result.secure_url);
+      }
+    );
+    stream.end(buffer);
+  });
+}
 
 // ─── Seed default settings (runs async on startup) ───────────────────────────
 const defaultSettings: Record<string, string> = {
@@ -429,16 +440,24 @@ adminRouter.get("/media", async (_req, res: Response) => {
 adminRouter.post("/media/upload", upload.array("files", 10), async (req: AuthRequest, res: Response) => {
   try {
     const files = req.files as Express.Multer.File[];
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    if (!files?.length) return res.status(400).json({ message: "No files provided" });
     const uploaded = [];
 
     for (const file of files) {
       const id = uuidv4();
-      const url = `${baseUrl}/uploads/${file.filename}`;
+      let url: string;
+
+      if (isCloudinaryConfigured()) {
+        url = await uploadToCloudinary(file.buffer, file.mimetype, file.originalname);
+      } else {
+        // Fallback: base64 data URL (not ideal for production)
+        url = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+      }
+
       await db.prepare(
         "INSERT INTO media (id, filename, original_name, url, size, mime_type) VALUES (?, ?, ?, ?, ?, ?)"
-      ).runAsync(id, file.filename, file.originalname, url, file.size, file.mimetype);
-      uploaded.push({ id, filename: file.filename, original_name: file.originalname, url, size: file.size, mime_type: file.mimetype });
+      ).runAsync(id, id, file.originalname, url, file.size, file.mimetype);
+      uploaded.push({ id, filename: id, original_name: file.originalname, url, size: file.size, mime_type: file.mimetype });
     }
 
     res.json({ media: uploaded });
@@ -450,14 +469,7 @@ adminRouter.post("/media/upload", upload.array("files", 10), async (req: AuthReq
 
 adminRouter.delete("/media/:id", async (req: AuthRequest, res: Response) => {
   try {
-    const media = await db.prepare(
-      "SELECT filename FROM media WHERE id = ?"
-    ).getAsync(req.params.id) as { filename: string } | undefined;
-    if (media) {
-      const filePath = path.join(uploadDir, media.filename);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-      await db.prepare("DELETE FROM media WHERE id = ?").runAsync(req.params.id);
-    }
+    await db.prepare("DELETE FROM media WHERE id = ?").runAsync(req.params.id);
     res.json({ message: "Deleted" });
   } catch {
     res.status(500).json({ message: "Failed" });
