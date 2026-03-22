@@ -14,7 +14,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401 && typeof window !== "undefined") {
+    if ((err.response?.status === 401 || err.response?.status === 403) && typeof window !== "undefined") {
       Cookies.remove("dd_admin_token");
       window.location.href = "/login";
     }

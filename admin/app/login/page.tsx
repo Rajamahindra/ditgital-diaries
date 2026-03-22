@@ -10,7 +10,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { setAuth } = useAdminStore();
+  const { setAuth, logout } = useAdminStore();
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -18,12 +18,19 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await adminAPI.login(email, password);
-      const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").split(",").map(e => e.trim());
-      if (adminEmails.length > 0 && adminEmails[0] && !adminEmails.includes(res.data.user.email)) {
-        toast.error("Not authorized as admin");
-        return;
-      }
+      // Set auth first so the next request has the token
       setAuth(res.data.user, res.data.token);
+      // Verify admin access against the backend
+      try {
+        await adminAPI.getStats();
+      } catch (adminErr: unknown) {
+        const status = (adminErr as { response?: { status?: number } })?.response?.status;
+        if (status === 403) {
+          logout();
+          toast.error("Access denied — this account is not an admin");
+          return;
+        }
+      }
       router.push("/dashboard");
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Login failed";
