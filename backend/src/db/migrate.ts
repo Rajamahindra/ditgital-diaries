@@ -110,6 +110,13 @@ export async function runMigrations() {
   try { await db.exec(`ALTER TABLE users ADD COLUMN password_reset_token TEXT`); } catch {}
   try { await db.exec(`ALTER TABLE users ADD COLUMN password_reset_expires TEXT`); } catch {}
 
+  // Fix: ensure all cards have is_active = 1 (old rows may have NULL or 0)
+  await db.exec(`UPDATE cards SET is_active = 1 WHERE is_active IS NULL OR CAST(is_active AS INTEGER) = 0`);
+
+  // Fix: ensure unique_id column exists (may be missing in old schemas)
+  try { await db.exec(`ALTER TABLE cards ADD COLUMN unique_id TEXT`); } catch {}
+  try { await db.exec(`ALTER TABLE cards ADD COLUMN is_featured INTEGER DEFAULT 0`); } catch {}
+
   await db.exec(`
     CREATE TABLE IF NOT EXISTS posts (
       id TEXT PRIMARY KEY,

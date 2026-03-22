@@ -50,20 +50,22 @@ cardsRouter.get("/", authenticate, async (req: AuthRequest, res: Response) => {
 // GET /api/cards/public/:username
 cardsRouter.get("/public/:username", async (req, res: Response) => {
   try {
-    const row = await db.prepare(
+    // First try: published + active
+    let row = await db.prepare(
       "SELECT * FROM cards WHERE username = ? AND CAST(is_published AS INTEGER) = 1 AND CAST(is_active AS INTEGER) = 1"
     ).getAsync(req.params.username) as Record<string, unknown> | undefined;
+
+    // Fallback: just published (handles old rows where is_active may be null/0)
     if (!row) {
-      // Try without is_active check (some old cards may have is_active = 0 by default)
-      const rowAny = await db.prepare(
+      row = await db.prepare(
         "SELECT * FROM cards WHERE username = ? AND CAST(is_published AS INTEGER) = 1"
       ).getAsync(req.params.username) as Record<string, unknown> | undefined;
-      if (!rowAny) return res.status(404).json({ message: "Card not found" });
-      return res.json({ card: parseCard(rowAny) });
     }
+
+    if (!row) return res.status(404).json({ message: "Card not found" });
     res.json({ card: parseCard(row) });
   } catch (err) {
-    console.error(err);
+    console.error("Public card error:", err);
     res.status(500).json({ message: "Failed to fetch card" });
   }
 });
@@ -147,12 +149,30 @@ cardsRouter.post("/", authenticate, async (req: AuthRequest, res: Response) => {
 function sanitizeLayout(layout: unknown): unknown {
   if (!layout || typeof layout !== "object") return layout;
   const str = JSON.stringify(layout);
-  // Replace any base64 data URLs longer than 10KB with empty string
   const sanitized = str.replace(/"data:image\/[^;]+;base64,[A-Za-z0-9+/=]{10240,}"/g, '""');
   try {
     return JSON.parse(sanitized);
   } catch {
     return layout;
+  }
+}
+
+// Exported: called on server startup to fix any existing cards with huge base64 images
+export async function cleanupBase64Layouts() {
+  try {
+    const rows = await db.prepare("SELECT id, layout FROM cards").allAsync() as { id: string; layout: string }[];
+    let fixed = 0;
+    for (const row of rows) {
+      if (!row.layout) continue;
+      if (!/data:image\/[^;]+;base64,[A-Za-z0-9+/=]{10240,}/.test(row.layout)) continue;
+      const cleaned = row.layout.replace(/"data:image\/[^;]+;base64,[A-Za-z0-9+/=]{10240,}"/g, '""');
+      await db.prepare("UPDATE cards SET layout = ?, updated_at = ? WHERE id = ?")
+        .runAsync(cleaned, new Date().toISOString(), row.id);
+      fixed++;
+    }
+    if (fixed > 0) console.log(`✅ Cleaned base64 images from ${fixed} card(s)`);
+  } catch (err) {
+    console.error("cleanupBase64Layouts error:", err);
   }
 }
 

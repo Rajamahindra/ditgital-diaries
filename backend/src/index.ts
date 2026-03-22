@@ -9,17 +9,11 @@ import path from "path";
 
 dotenv.config();
 
+import { runMigrations } from "./db/migrate";
+import { cleanupBase64Layouts } from "./routes/cards";
 import { authRouter } from "./routes/auth";
 import { cardsRouter } from "./routes/cards";
 import { templatesRouter } from "./routes/templates";
-import { leadsRouter } from "./routes/leads";
-import { aiRouter } from "./routes/ai";
-import { discoverRouter } from "./routes/discover";
-import { subscriptionsRouter } from "./routes/subscriptions";
-import { adminRouter, publicSettingsRouter } from "./routes/admin";
-import { paymentsRouter } from "./routes/payments";
-import { uploadRouter } from "./routes/upload";
-import { errorHandler } from "./middleware/errorHandler";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -74,8 +68,14 @@ app.get("/health", (_, res) => res.json({ status: "ok", timestamp: new Date().to
 // Error handler
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Digital Diaries API running on port ${PORT}`);
+  try {
+    await runMigrations();
+    await cleanupBase64Layouts();
+  } catch (err) {
+    console.error("Startup tasks error:", err);
+  }
 });
 
 export default app;

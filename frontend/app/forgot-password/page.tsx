@@ -86,7 +86,6 @@ export default function ForgotPasswordPage() {
         </div>
 
         <div className="bg-dark-card rounded-2xl p-8 border border-white/10">
-          {/* Step indicators */}
           <div className="flex items-center gap-2 mb-6">
             {(["email", "otp", "password"] as Step[]).map((s, i) => (
               <div key={s} className="flex items-center gap-2 flex-1">
@@ -105,7 +104,7 @@ export default function ForgotPasswordPage() {
               <motion.form key="email" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} onSubmit={handleSendOTP} className="space-y-5">
                 <div>
                   <h2 className="text-white text-xl font-bold mb-1">Forgot Password?</h2>
-                  <p className="text-white/50 text-sm">Enter your email and we'll send you an OTP.</p>
+                  <p className="text-white/50 text-sm">Enter your email and we&apos;ll send you an OTP.</p>
                 </div>
                 <div>
                   <label className="text-white/70 text-sm font-medium block mb-2">Email Address</label>
