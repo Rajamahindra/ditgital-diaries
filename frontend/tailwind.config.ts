@@ -10,9 +10,9 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: "#0F172A",
-        secondary: "#2563EB",
-        accent: "#7C3AED",
+        primary: "var(--primary, #0F172A)",
+        secondary: "var(--secondary, #2563EB)",
+        accent: "var(--accent, #7C3AED)",
         surface: "#F8FAFC",
         "dark-surface": "#0F172A",
         "dark-card": "#1E293B",
@@ -22,9 +22,9 @@ const config: Config = {
         display: ["Poppins", "Inter", "sans-serif"],
       },
       backgroundImage: {
-        "gradient-accent": "linear-gradient(135deg, #7C3AED 0%, #06B6D4 100%)",
-        "gradient-hero": "linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%)",
-        "gradient-card": "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
+        "gradient-accent": "linear-gradient(135deg, var(--accent, #7C3AED) 0%, #06B6D4 100%)",
+        "gradient-hero": "linear-gradient(135deg, var(--primary, #0F172A) 0%, #1E293B 50%, var(--primary, #0F172A) 100%)",
+        "gradient-card": "linear-gradient(135deg, #1E293B 0%, var(--primary, #0F172A) 100%)",
       },
       animation: {
         "float": "float 6s ease-in-out infinite",
@@ -52,9 +52,9 @@ const config: Config = {
       },
       boxShadow: {
         "premium": "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255,255,255,0.05)",
-        "card-hover": "0 32px 64px -12px rgba(37, 99, 235, 0.3)",
-        "glow-blue": "0 0 30px rgba(37, 99, 235, 0.4)",
-        "glow-purple": "0 0 30px rgba(124, 58, 237, 0.4)",
+        "card-hover": "0 32px 64px -12px color-mix(in srgb, var(--secondary, #2563EB) 30%, transparent)",
+        "glow-blue": "0 0 30px color-mix(in srgb, var(--secondary, #2563EB) 40%, transparent)",
+        "glow-purple": "0 0 30px color-mix(in srgb, var(--accent, #7C3AED) 40%, transparent)",
       },
     },
   },
