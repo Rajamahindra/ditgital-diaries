@@ -35,8 +35,8 @@ app.use(morgan("dev"));
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true });
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 500, standardHeaders: true, skip: (req) => req.path.startsWith("/templates") || req.path.startsWith("/cards/public") || req.path.startsWith("/discover") || req.path.startsWith("/admin/public") });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
 app.use("/api/auth", authLimiter);
 app.use("/api", limiter);
 
