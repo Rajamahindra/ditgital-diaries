@@ -14,9 +14,12 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
+    // Only auto-redirect on 401/403 if we're NOT on the login page
     if ((err.response?.status === 401 || err.response?.status === 403) && typeof window !== "undefined") {
-      Cookies.remove("dd_admin_token");
-      window.location.href = "/login";
+      if (!window.location.pathname.includes("/login")) {
+        Cookies.remove("dd_admin_token");
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(err);
   }
