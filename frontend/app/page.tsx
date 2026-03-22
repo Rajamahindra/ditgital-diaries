@@ -13,12 +13,17 @@ import { Footer } from "@/components/layout/Footer";
 
 export const dynamic = "force-dynamic";
 
+const BACKEND =
+  process.env.BACKEND_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://ditgital-diaries.onrender.com";
+
 async function getSiteSettings(): Promise<Record<string, string>> {
   try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/admin/public-settings`,
-      { cache: "no-store" }
-    );
+    const res = await fetch(`${BACKEND}/api/admin/public-settings`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(5000),
+    });
     if (!res.ok) return {};
     const data = await res.json();
     return data.settings || {};

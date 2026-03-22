@@ -62,24 +62,24 @@ function ProfileSection({ data, theme }: { data: Record<string, unknown>; theme:
           <h1 className="font-bold text-3xl sm:text-4xl leading-tight" style={{ color: theme.textColor as string || "#0F172A" }}>
             {data.name as string || "Your Name"}
           </h1>
-          {data.profession && (
+          {!!data.profession && (
             <p className="font-semibold text-base mt-1" style={{ color: secondaryColor }}>
-              {data.profession as string}
+              {String(data.profession)}
             </p>
           )}
-          {data.company && (
+          {!!data.company && (
             <p className="text-sm mt-0.5 opacity-60" style={{ color: theme.textColor as string || "#0F172A" }}>
-              {data.company as string}
+              {String(data.company)}
             </p>
           )}
-          {data.tagline && (
+          {!!data.tagline && (
             <p className="text-sm mt-1 italic opacity-50" style={{ color: theme.textColor as string || "#0F172A" }}>
-              &ldquo;{data.tagline as string}&rdquo;
+              &ldquo;{String(data.tagline)}&rdquo;
             </p>
           )}
-          {data.bio && (
+          {!!data.bio && (
             <p className="text-sm mt-3 leading-relaxed opacity-70 max-w-lg" style={{ color: theme.textColor as string || "#0F172A" }}>
-              {data.bio as string}
+              {String(data.bio)}
             </p>
           )}
         </motion.div>
@@ -173,7 +173,7 @@ export function PublicCard({ card }: { card: Card }) {
   const [showDownload, setShowDownload] = useState(false);
 
   const cardUrl = getCardUrl(card.username);
-  const theme = (card.layout?.theme || {}) as Record<string, unknown>;
+  const theme = (card.layout?.theme as unknown as Record<string, unknown>) || {};
   const sections = [...(card.layout?.sections || [])].sort((a, b) => a.position - b.position);
   const profileSection = sections.find((s) => s.type === "profile");
   const bgColor = (theme.backgroundColor as string) || "#F8FAFC";
