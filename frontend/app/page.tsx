@@ -42,8 +42,13 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function HomePage() {
   const settings = await getSiteSettings();
+  const primary = settings.primary_color || "#0F172A";
+  const secondary = settings.secondary_color || "#2563EB";
+  const accent = settings.accent_color || "#7C3AED";
+
   return (
     <main className="min-h-screen bg-primary overflow-x-hidden">
+      <style>{`:root { --primary: ${primary}; --secondary: ${secondary}; --accent: ${accent}; }`}</style>
       <Navbar settings={settings} />
       <HeroSection settings={settings} />
       <HowItWorks />
