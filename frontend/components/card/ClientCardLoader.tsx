@@ -15,32 +15,48 @@ export function ClientCardLoader({ username }: { username: string }) {
   const load = async () => {
     setStatus("loading");
     setAttempt(0);
+    setCard(null);
 
-    // Try up to 4 times with increasing delays (handles Render cold start ~30s)
-    for (let i = 0; i <= 3; i++) {
-      if (i > 0) {
+    const delays = [0, 5000, 8000, 10000]; // 4 attempts, increasing wait
+
+    for (let i = 0; i < delays.length; i++) {
+      if (delays[i] > 0) {
         setAttempt(i);
-        await new Promise((r) => setTimeout(r, i === 1 ? 4000 : i === 2 ? 6000 : 8000));
+        await new Promise((r) => setTimeout(r, delays[i]));
       }
+
       try {
         const res = await fetch(`${API_URL}/api/cards/public/${username}`, {
           cache: "no-store",
         });
+
+        // Only trust a 404 if it's a proper JSON response from our API
         if (res.status === 404) {
-          setStatus("notfound");
-          return;
+          const contentType = res.headers.get("content-type") || "";
+          if (contentType.includes("application/json")) {
+            const body = await res.json();
+            // Confirm it's our API's 404, not a proxy/CDN 404
+            if (body?.message) {
+              setStatus("notfound");
+              return;
+            }
+          }
+          // Not a real API 404 — treat as server still waking, retry
+          continue;
         }
+
         if (res.ok) {
           const data = await res.json();
-          if (data.card) {
+          if (data?.card) {
             setCard(data.card);
             return;
           }
         }
       } catch {
-        // retry
+        // network error — retry
       }
     }
+
     setStatus("error");
   };
 
@@ -85,6 +101,7 @@ export function ClientCardLoader({ username }: { username: string }) {
     );
   }
 
+  // Loading state
   return (
     <div className="min-h-screen bg-gradient-hero flex items-center justify-center px-4">
       <div className="text-center">
@@ -94,7 +111,7 @@ export function ClientCardLoader({ username }: { username: string }) {
         <Loader2 className="w-8 h-8 text-white/50 animate-spin mx-auto mb-3" />
         <p className="text-white font-semibold">Loading card...</p>
         {attempt > 0 && (
-          <p className="text-white/40 text-sm mt-1">Waking up server... ({attempt}/4)</p>
+          <p className="text-white/40 text-sm mt-1">Waking up server... ({attempt}/3)</p>
         )}
       </div>
     </div>
