@@ -38,6 +38,7 @@ function getDefaultData(type: SectionType): Record<string, unknown> {
     text: { content: "Add your text here..." },
     image: { url: "", alt: "", caption: "" },
     video: { url: "", title: "" },
+    gallery: { images: [] },
     custom_html: { html: "<p>Custom HTML</p>" },
   };
   return defaults[type] || {};

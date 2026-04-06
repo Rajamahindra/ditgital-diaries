@@ -29,21 +29,20 @@ function ColorRow({ label, themeKey }: { label: string; themeKey: string }) {
 }
 
 async function uploadImageFallback(file: File): Promise<string> {
-  // Compress aggressively to keep base64 small (max 200px, 0.5 quality ~5-15KB)
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
-      const maxW = 200;
+      const maxW = 800;
       const scale = Math.min(1, maxW / img.width);
       const canvas = document.createElement("canvas");
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
       const ctx = canvas.getContext("2d");
       if (!ctx) return reject(new Error("canvas failed"));
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL("image/jpeg", 0.5));
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
     };
     img.onerror = reject;
     img.src = url;
@@ -370,6 +369,106 @@ function SectionEditor({ section }: { section: ReturnType<typeof useBuilderStore
                 placeholder="9 AM – 6 PM or Closed" className={inputCls} />
             </div>
           ))}
+        </div>
+      );
+    }
+
+    case "portfolio": {
+      const items = (section.data.items as { id: string; title: string; description?: string; image?: string; link?: string }[]) || [];
+      return (
+        <div className="space-y-3">
+          {items.map((item, i) => (
+            <div key={item.id} className="p-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-400 dark:text-white/30 font-medium">Item {i + 1}</span>
+                <button onClick={() => update("items", items.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-500 p-0.5">
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+              <ImageUploadField
+                label="Image"
+                value={item.image || ""}
+                onChange={(url) => { const u = [...items]; u[i] = { ...item, image: url }; update("items", u); }}
+                icon={<ImageIcon className="w-5 h-5" />}
+                aspectClass="h-20"
+              />
+              <input value={item.title} onChange={(e) => { const u = [...items]; u[i] = { ...item, title: e.target.value }; update("items", u); }}
+                placeholder="Project title" className={inputCls} />
+              <input value={item.description || ""} onChange={(e) => { const u = [...items]; u[i] = { ...item, description: e.target.value }; update("items", u); }}
+                placeholder="Short description" className={inputCls} />
+              <input value={item.link || ""} onChange={(e) => { const u = [...items]; u[i] = { ...item, link: e.target.value }; update("items", u); }}
+                placeholder="Link (optional)" className={inputCls} />
+            </div>
+          ))}
+          <button onClick={() => update("items", [...items, { id: uuidv4(), title: "Project Title", description: "", image: "", link: "" }])}
+            className="w-full text-xs text-secondary border border-secondary/30 hover:bg-secondary/10 rounded-lg py-2 flex items-center justify-center gap-1.5 transition-all">
+            <Plus className="w-3 h-3" /> Add Portfolio Item
+          </button>
+        </div>
+      );
+    }
+
+    case "image":
+      return (
+        <div className="space-y-3">
+          <ImageUploadField
+            label="Image"
+            value={(section.data.url as string) || ""}
+            onChange={(url) => update("url", url)}
+            icon={<ImageIcon className="w-6 h-6" />}
+            aspectClass="h-32"
+          />
+          <div>
+            <label className={labelCls}>Caption (optional)</label>
+            <input value={(section.data.caption as string) || ""} onChange={(e) => update("caption", e.target.value)}
+              placeholder="Image caption..." className={inputCls} />
+          </div>
+        </div>
+      );
+
+    case "video":
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className={labelCls}>YouTube / Video URL</label>
+            <input value={(section.data.url as string) || ""} onChange={(e) => update("url", e.target.value)}
+              placeholder="https://youtube.com/watch?v=..." className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>Title (optional)</label>
+            <input value={(section.data.title as string) || ""} onChange={(e) => update("title", e.target.value)}
+              placeholder="Video title" className={inputCls} />
+          </div>
+        </div>
+      );
+
+    case "gallery": {
+      const images = (section.data.images as { id: string; url: string; caption?: string }[]) || [];
+      return (
+        <div className="space-y-3">
+          {images.map((img, i) => (
+            <div key={img.id} className="p-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-400 dark:text-white/30 font-medium">Photo {i + 1}</span>
+                <button onClick={() => update("images", images.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-500 p-0.5">
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+              <ImageUploadField
+                label="Photo"
+                value={img.url}
+                onChange={(url) => { const u = [...images]; u[i] = { ...img, url }; update("images", u); }}
+                icon={<ImageIcon className="w-5 h-5" />}
+                aspectClass="h-20"
+              />
+              <input value={img.caption || ""} onChange={(e) => { const u = [...images]; u[i] = { ...img, caption: e.target.value }; update("images", u); }}
+                placeholder="Caption (optional)" className={inputCls} />
+            </div>
+          ))}
+          <button onClick={() => update("images", [...images, { id: uuidv4(), url: "", caption: "" }])}
+            className="w-full text-xs text-secondary border border-secondary/30 hover:bg-secondary/10 rounded-lg py-2 flex items-center justify-center gap-1.5 transition-all">
+            <Plus className="w-3 h-3" /> Add Photo
+          </button>
         </div>
       );
     }

@@ -35,6 +35,42 @@ function SectionRenderer({ section }: { section: CardSection }) {
     case "testimonials": return <TestimonialsPreview data={section.data} />;
     case "business_hours": return <BusinessHoursPreview data={section.data} />;
     case "portfolio": return <PortfolioPreview data={section.data} />;
+    case "image":
+      return (
+        <div className="px-4 py-3">
+          {section.data.url ? (
+            <img src={section.data.url as string} alt="Image" className="w-full rounded-xl object-cover max-h-40" />
+          ) : (
+            <div className="w-full h-24 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-300 dark:text-white/20 text-xs">Click to add image</div>
+          )}
+          {section.data.caption && <p className="text-xs opacity-50 mt-1 text-center">{section.data.caption as string}</p>}
+        </div>
+      );
+    case "video":
+      return (
+        <div className="px-4 py-3">
+          <div className="w-full h-24 rounded-xl bg-gray-900 flex items-center justify-center text-white/40 text-xs gap-2">
+            <span>▶</span> {section.data.title as string || "Video"}
+          </div>
+        </div>
+      );
+    case "gallery": {
+      const images = (section.data.images as { id: string; url: string }[]) || [];
+      const visible = images.filter(i => i.url);
+      return (
+        <div className="px-4 py-3">
+          {visible.length === 0 ? (
+            <div className="w-full h-16 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-300 dark:text-white/20 text-xs">Add photos to gallery</div>
+          ) : (
+            <div className="grid grid-cols-3 gap-1.5">
+              {visible.slice(0, 6).map(img => (
+                <img key={img.id} src={img.url} alt="" className="w-full h-16 object-cover rounded-lg" />
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
     default:
       return (
         <div className="px-4 py-6 text-center text-gray-400 dark:text-white/30 text-sm">

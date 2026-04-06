@@ -161,6 +161,48 @@ function SectionRenderer({ section, cardId, theme }: { section: CardSection; car
           <p className="text-sm leading-relaxed opacity-70">{section.data.content as string}</p>
         </div>
       );
+    case "image": {
+      const url = section.data.url as string;
+      if (!url) return null;
+      return (
+        <div className="px-5 sm:px-8 py-4">
+          <img src={url} alt={(section.data.caption as string) || "Image"} className="w-full rounded-2xl object-cover" />
+          {section.data.caption && <p className="text-xs opacity-50 mt-2 text-center">{section.data.caption as string}</p>}
+        </div>
+      );
+    }
+    case "video": {
+      const rawUrl = (section.data.url as string) || "";
+      const ytMatch = rawUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+      const embedUrl = ytMatch ? `https://www.youtube.com/embed/${ytMatch[1]}` : rawUrl;
+      if (!rawUrl) return null;
+      return (
+        <div className="px-5 sm:px-8 py-4">
+          {section.data.title && <p className="text-sm font-semibold mb-3 opacity-70">{section.data.title as string}</p>}
+          <div className="relative w-full rounded-2xl overflow-hidden" style={{ paddingBottom: "56.25%" }}>
+            <iframe src={embedUrl} className="absolute inset-0 w-full h-full" allowFullScreen title={section.data.title as string || "Video"} />
+          </div>
+        </div>
+      );
+    }
+    case "gallery": {
+      const images = (section.data.images as { id: string; url: string; caption?: string }[]) || [];
+      const visible = images.filter(i => i.url);
+      if (visible.length === 0) return null;
+      return (
+        <div className="px-5 sm:px-8 py-4">
+          <p className="text-xs font-bold uppercase tracking-widest opacity-40 mb-3">Gallery</p>
+          <div className="grid grid-cols-2 gap-2">
+            {visible.map((img) => (
+              <div key={img.id} className="rounded-xl overflow-hidden">
+                <img src={img.url} alt={img.caption || "Gallery"} className="w-full h-28 object-cover" />
+                {img.caption && <p className="text-xs opacity-50 mt-1 px-1">{img.caption}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
     default: return null;
   }
 }
