@@ -12,10 +12,16 @@ services:
         value: 5000
       - key: JWT_SECRET
         generateValue: true
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
       - key: FRONTEND_URL
-        value: https://yourdomain.com
+        value: https://digitaldiaries.in
+      - key: ADMIN_URL
+        value: https://admin.digitaldiaries.in
       - key: ADMIN_EMAILS
-        value: admin@digitaldiaries.com
+        value: mahadevanaidu28@gmail.com
       - key: OPENAI_API_KEY
         value: ""
       - key: CLOUDINARY_CLOUD_NAME

@@ -5,7 +5,7 @@ import { Loader2, Sparkles, RefreshCw } from "lucide-react";
 import { PublicCard } from "./PublicCard";
 import Link from "next/link";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://ditgital-diaries.onrender.com";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://digital-diaries.onrender.com";
 
 export function ClientCardLoader({ username }: { username: string }) {
   const [card, setCard] = useState<unknown>(null);

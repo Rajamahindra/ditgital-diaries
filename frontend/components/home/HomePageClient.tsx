@@ -13,7 +13,7 @@ import { SocialProof } from "@/components/home/SocialProof";
 import { FinalCTA } from "@/components/home/FinalCTA";
 import { Footer } from "@/components/layout/Footer";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "https://ditgital-diaries.onrender.com";
+const API = process.env.NEXT_PUBLIC_API_URL || "https://digital-diaries.onrender.com";
 
 function applyColors(settings: Record<string, string>) {
   if (typeof document === "undefined") return;
