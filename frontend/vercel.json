@@ -3,10 +3,16 @@
   "buildCommand": "npm run build",
   "installCommand": "npm install",
   "outputDirectory": ".next",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://digital-diaries.onrender.com",
+    "NEXT_PUBLIC_APP_URL": "https://greaternewstv.com"
+  },
   "headers": [
     {
       "source": "/(.*)",
-      "headers": [{ "key": "X-Build", "value": "41d84f3" }]
+      "headers": [
+        { "key": "X-Build", "value": "50d9d17" }
+      ]
     }
   ]
 }
