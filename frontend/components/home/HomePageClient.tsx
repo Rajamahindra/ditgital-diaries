@@ -45,7 +45,7 @@ export function HomePageClient({ initialSettings }: { initialSettings: Record<st
   }, []);
 
   return (
-    <main className="min-h-screen bg-primary overflow-x-hidden">
+    <main className="min-h-screen bg-[#0C0A1A] overflow-x-hidden">
       <Navbar settings={settings} />
       <HeroSection settings={settings} />
       <HowItWorks />

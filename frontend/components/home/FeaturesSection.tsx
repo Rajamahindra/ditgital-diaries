@@ -4,66 +4,87 @@ import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import {
   BarChart3, Brain, Globe, QrCode, Download, Users,
-  MapPin, Zap, Shield, Smartphone, Link2, Palette
+  MapPin, Zap, Smartphone, Link2, Palette, Shield,
 } from "lucide-react";
 
-const features = [
-  { icon: Brain, title: "AI Card Generator", desc: "Describe yourself, AI builds your complete card with bio, services, and design.", color: "#7C3AED" },
-  { icon: Globe, title: "Live Public URL", desc: "Every card gets a unique URL. Share it like a website.", color: "#2563EB" },
-  { icon: BarChart3, title: "Real-time Analytics", desc: "Track views, clicks, WhatsApp taps, QR scans and more.", color: "#06B6D4" },
-  { icon: QrCode, title: "Auto QR Code", desc: "Every card auto-generates a scannable QR code.", color: "#10B981" },
-  { icon: Download, title: "Download as PNG/PDF/VCF", desc: "Export your card in any format instantly.", color: "#F59E0B" },
-  { icon: Users, title: "Lead Capture", desc: "Built-in contact form captures leads directly to your dashboard.", color: "#EF4444" },
-  { icon: MapPin, title: "Business Discovery Map", desc: "Get discovered by professionals searching in your area.", color: "#8B5CF6" },
-  { icon: Zap, title: "Drag & Drop Builder", desc: "Professional editor with live preview. No code needed.", color: "#F97316" },
-  { icon: Shield, title: "NFC Ready", desc: "Tap your phone to share. NFC integration built-in.", color: "#14B8A6" },
-  { icon: Smartphone, title: "Mobile Optimized", desc: "Every card looks perfect on all devices.", color: "#EC4899" },
-  { icon: Link2, title: "Smart Link Tracking", desc: "Track every external click with detailed analytics.", color: "#6366F1" },
-  { icon: Palette, title: "Premium Templates", desc: "100+ professionally designed templates across all industries.", color: "#84CC16" },
+const FEATURES = [
+  { Icon: Brain,       title: "AI Card Generator",           desc: "Describe yourself — AI writes the bio, picks a design, adds services.",  tag: "AI"      },
+  { Icon: Globe,       title: "Live Public URL",              desc: "Every card is a real webpage. Share one link, works everywhere.",         tag: "Core"    },
+  { Icon: BarChart3,   title: "Real-time Analytics",          desc: "Views, clicks, WhatsApp taps, QR scans — all tracked live.",             tag: "Data"    },
+  { Icon: QrCode,      title: "Auto QR Code",                 desc: "Every card auto-generates a scannable QR. No extra steps.",              tag: "Core"    },
+  { Icon: Download,    title: "Export PNG · PDF · VCF",       desc: "Download your card in any format with one click.",                       tag: "Export"  },
+  { Icon: Users,       title: "Lead Capture Form",            desc: "Built-in contact form sends leads straight to your dashboard.",          tag: "CRM"     },
+  { Icon: MapPin,      title: "Discovery Map",                desc: "Get found by professionals searching for your skill in your city.",      tag: "Growth"  },
+  { Icon: Zap,         title: "Drag & Drop Builder",          desc: "Live preview editor. Rearrange, theme, publish — no code.",              tag: "Builder" },
+  { Icon: Shield,      title: "NFC-ready",                    desc: "Tap to share via NFC on supported devices. Physical → digital.",         tag: "Pro"     },
+  { Icon: Smartphone,  title: "Mobile-first",                 desc: "Every card is perfected for small screens. Always.",                     tag: "Core"    },
+  { Icon: Link2,       title: "Smart Link Tracking",          desc: "See which external links get clicked with per-link analytics.",          tag: "Data"    },
+  { Icon: Palette,     title: "Premium Templates",            desc: "100+ templates across industries. One click to apply.",                  tag: "Design"  },
 ];
 
+const TAG_COLORS: Record<string, string> = {
+  AI: "#8B5CF6", Core: "#6D28D9", Data: "#0891B2", Export: "#059669",
+  CRM: "#DC2626", Growth: "#D97706", Builder: "#EA580C", Pro: "#7C3AED",
+  Design: "#DB2777",
+};
+
 export function FeaturesSection({ settings = {} }: { settings?: Record<string, string> }) {
-  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.05 });
+  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.04 });
 
   return (
-    <section id="features" className="bg-surface dark:bg-dark-surface section-padding" ref={ref}>
-      <div className="max-w-7xl mx-auto">
+    <section id="features" className="bg-white dark:bg-[#0C0A1A] section-padding" ref={ref}>
+      <div className="max-w-6xl mx-auto">
+
+        {/* Header — left-aligned, not centred */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          transition={{ duration: 0.55 }}
+          className="mb-14 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6"
         >
-          <span className="text-secondary text-sm font-semibold uppercase tracking-widest">
-            Everything You Need
-          </span>
-          <h2 className="text-4xl lg:text-5xl font-display font-black text-primary dark:text-white mt-3 mb-4">
-            {settings.features_title || "More than a card. A digital identity."}
-          </h2>
-          <p className="text-gray-500 dark:text-white/50 text-lg max-w-xl mx-auto">
-            {settings.features_subtitle || "Every feature you need to build a powerful professional presence online."}
+          <div>
+            <p className="text-violet-600 dark:text-violet-400 text-sm font-semibold tracking-widest uppercase mb-3">
+              Features
+            </p>
+            <h2 className="text-4xl lg:text-5xl font-black text-gray-900 dark:text-white leading-tight">
+              {settings.features_title || (
+                <>Everything to build<br />a powerful presence.</>
+              )}
+            </h2>
+          </div>
+          <p className="text-gray-500 dark:text-violet-300/40 text-base max-w-xs lg:text-right">
+            {settings.features_subtitle || "One platform. Every tool you need."}
           </p>
         </motion.div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {features.map(({ icon: Icon, title, desc, color }, i) => (
-            <motion.div
-              key={title}
-              initial={{ opacity: 0, y: 30 }}
-              animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: i * 0.05 }}
-              className="group bg-white dark:bg-dark-card rounded-2xl p-6 border border-gray-100 dark:border-white/5 hover:border-secondary/30 dark:hover:border-secondary/30 transition-all duration-300 hover:-translate-y-1 hover:shadow-card-hover cursor-default"
-            >
-              <div
-                className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110"
-                style={{ background: `${color}15`, border: `1px solid ${color}25` }}
+        {/* Grid — intentionally non-uniform: 4 cols on wide */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {FEATURES.map(({ Icon, title, desc, tag }, i) => {
+            const tagColor = TAG_COLORS[tag] || "#6366F1";
+            return (
+              <motion.div
+                key={title}
+                initial={{ opacity: 0, y: 20 }}
+                animate={inView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.45, delay: i * 0.04 }}
+                className="group p-5 rounded-2xl border border-gray-100 dark:border-white/[0.07] bg-gray-50/50 dark:bg-white/[0.03] hover:border-gray-300 dark:hover:border-white/15 hover:bg-white dark:hover:bg-white/[0.06] transition-all duration-200"
               >
-                <Icon className="w-5 h-5" style={{ color }} />
-              </div>
-              <h3 className="text-primary dark:text-white font-semibold text-base mb-2">{title}</h3>
-              <p className="text-gray-500 dark:text-white/40 text-sm leading-relaxed">{desc}</p>
-            </motion.div>
-          ))}
+                {/* Icon + tag in same row */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center"
+                    style={{ background: `${tagColor}12`, border: `1px solid ${tagColor}20` }}>
+                    <Icon className="w-4.5 h-4.5" style={{ color: tagColor }} />
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                    style={{ color: tagColor, background: `${tagColor}12` }}>
+                    {tag}
+                  </span>
+                </div>
+                <h3 className="text-gray-900 dark:text-white font-semibold text-sm mb-1.5">{title}</h3>
+                <p className="text-gray-500 dark:text-white/35 text-xs leading-relaxed">{desc}</p>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </section>
