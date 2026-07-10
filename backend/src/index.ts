@@ -26,8 +26,24 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+
+const ALLOWED_ORIGINS = [
+  "https://greaternewstv.com",
+  "https://www.greaternewstv.com",
+  "https://digital-diaries.onrender.com",
+  "http://localhost:3000",
+  "http://localhost:3001",
+];
+
 app.use(cors({
-  origin: (_origin, callback) => callback(null, true),
+  origin: (origin, callback) => {
+    // allow requests with no origin (mobile apps, curl, Render health checks)
+    if (!origin) return callback(null, true);
+    if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    // also allow any *.vercel.app preview deployments
+    if (origin.endsWith(".vercel.app")) return callback(null, true);
+    return callback(new Error(`CORS: origin ${origin} not allowed`), false);
+  },
   credentials: true,
 }));
 app.use(compression());

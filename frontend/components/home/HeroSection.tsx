@@ -150,7 +150,7 @@ export function HeroSection({ settings = {} }: { settings?: Record<string, strin
 
                 {/* URL */}
                 <div className="flex items-center justify-between pt-4 border-t border-white/6">
-                  <span className="text-white/25 text-[10px] font-mono">digitaldiaries.com/alex</span>
+                  <span className="text-white/25 text-[10px] font-mono">greaternewstv.com/alex</span>
                   {/* tiny QR */}
                   <div className="grid grid-cols-4 gap-0.5">
                     {[1,0,1,0, 0,1,0,1, 1,0,1,0, 0,1,0,1].map((v,i) => (

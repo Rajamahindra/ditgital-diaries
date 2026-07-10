@@ -52,7 +52,7 @@ export function Footer({ settings = {} }: { settings?: Record<string, string> })
 
         <div className="border-t border-violet-100 dark:border-violet-900/30 pt-7 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-gray-400 dark:text-violet-300/30 text-sm">
-            {settings.footer_text || "© 2026 Digital Diaries. All rights reserved."}
+            {settings.footer_text || "© 2026 Greater News TV / Digital Diaries. All rights reserved."}
           </p>
           <p className="text-gray-400 dark:text-violet-300/25 text-xs">
             Made with ❤️ in India

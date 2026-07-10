@@ -17,9 +17,9 @@ services:
       - key: TURSO_AUTH_TOKEN
         sync: false
       - key: FRONTEND_URL
-        value: https://digitaldiaries.in
+        value: https://greaternewstv.com
       - key: ADMIN_URL
-        value: https://admin.digitaldiaries.in
+        value: https://greaternewstv.com/admin
       - key: ADMIN_EMAILS
         value: mahadevanaidu28@gmail.com
       - key: OPENAI_API_KEY

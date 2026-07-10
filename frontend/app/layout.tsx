@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     title: "Digital Diaries",
     description: "AI-Powered Digital Identity Platform",
     type: "website",
-    url: "https://digitaldiaries.com",
+    url: "https://greaternewstv.com",
   },
   twitter: {
     card: "summary_large_image",
