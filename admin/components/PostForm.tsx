@@ -7,7 +7,7 @@ import { Save, Eye, Upload, X, Plus, Loader2 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 
 interface Category { id: string; name: string; }
-interface Post {
+export interface Post {
   id?: string; title?: string; subtitle?: string; slug?: string; content?: string;
   excerpt?: string; featured_image?: string; images?: string[]; category_id?: string;
   tags?: string[]; status?: string; seo_title?: string; seo_description?: string; publish_date?: string;

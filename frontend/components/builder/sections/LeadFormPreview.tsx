@@ -1,12 +1,16 @@
 "use client";
 
 import { useBuilderStore } from "@/lib/store";
+import { InlineText } from "./InlineEditHelpers";
 
-interface Props { data: Record<string, unknown> }
+interface Props { data: Record<string, unknown>; sectionId?: string; }
 
-export function LeadFormPreview({ data }: Props) {
-  const { layout } = useBuilderStore();
+export function LeadFormPreview({ data, sectionId }: Props) {
+  const { layout, updateSection, selectedSectionId } = useBuilderStore();
   const { secondaryColor, accentColor, darkMode } = layout.theme;
+  const id = sectionId ?? selectedSectionId ?? "";
+  const update = (key: string, v: unknown) => { if (id) updateSection(id, { [key]: v }); };
+
   const title = (data.title as string) || "Get in Touch";
   const submitText = (data.submitText as string) || "Send Message";
 
@@ -18,7 +22,14 @@ export function LeadFormPreview({ data }: Props) {
 
   return (
     <div className="px-5 py-4">
-      <p className="font-semibold text-base mb-4" style={{ color: darkMode ? "#F8FAFC" : "#0F172A" }}>{title}</p>
+      <InlineText
+        as="p"
+        value={title}
+        placeholder="Get in Touch"
+        onChange={(v) => update("title", v)}
+        className="font-semibold text-base mb-4"
+        style={{ color: darkMode ? "#F8FAFC" : "#0F172A" }}
+      />
       <div className="space-y-2.5">
         {["Your Name", "Phone Number", "Email Address"].map((placeholder) => (
           <div key={placeholder} className="w-full px-3.5 py-2.5 rounded-xl text-sm" style={inputStyle}>
@@ -28,12 +39,19 @@ export function LeadFormPreview({ data }: Props) {
         <div className="w-full px-3.5 py-2.5 rounded-xl text-sm h-16" style={inputStyle}>
           Your Message
         </div>
-        <button
-          className="w-full py-3.5 rounded-2xl font-semibold text-sm text-white transition-all hover:opacity-90"
+        {/* Editable submit button */}
+        <div
+          className="w-full py-3.5 rounded-2xl font-semibold text-sm text-white flex items-center justify-center"
           style={{ background: `linear-gradient(135deg, ${secondaryColor}, ${accentColor})` }}
         >
-          {submitText}
-        </button>
+          <InlineText
+            value={submitText}
+            placeholder="Send Message"
+            onChange={(v) => update("submitText", v)}
+            style={{ color: "#FFFFFF" }}
+            className="font-semibold text-sm text-center"
+          />
+        </div>
       </div>
     </div>
   );

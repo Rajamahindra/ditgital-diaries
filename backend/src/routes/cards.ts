@@ -148,13 +148,26 @@ cardsRouter.post("/", authenticate, async (req: AuthRequest, res: Response) => {
 // Strip large base64 data URLs from layout to prevent DB size issues
 function sanitizeLayout(layout: unknown): unknown {
   if (!layout || typeof layout !== "object") return layout;
-  const str = JSON.stringify(layout);
-  const sanitized = str.replace(/"data:image\/[^;]+;base64,[A-Za-z0-9+/=]{10240,}"/g, '""');
-  try {
-    return JSON.parse(sanitized);
-  } catch {
-    return layout;
+
+  // Walk the object tree and strip large base64 strings instead of using regex on huge strings
+  function walk(node: unknown): unknown {
+    if (typeof node === "string") {
+      // Strip base64 data URLs longer than 10KB
+      if (node.startsWith("data:image/") && node.length > 10240) return "";
+      return node;
+    }
+    if (Array.isArray(node)) return node.map(walk);
+    if (node && typeof node === "object") {
+      const result: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+        result[k] = walk(v);
+      }
+      return result;
+    }
+    return node;
   }
+
+  return walk(layout);
 }
 
 // Exported: called on server startup to fix any existing cards with huge base64 images
@@ -164,11 +177,17 @@ export async function cleanupBase64Layouts() {
     let fixed = 0;
     for (const row of rows) {
       if (!row.layout) continue;
-      if (!/data:image\/[^;]+;base64,[A-Za-z0-9+/=]{10240,}/.test(row.layout)) continue;
-      const cleaned = row.layout.replace(/"data:image\/[^;]+;base64,[A-Za-z0-9+/=]{10240,}"/g, '""');
-      await db.prepare("UPDATE cards SET layout = ?, updated_at = ? WHERE id = ?")
-        .runAsync(cleaned, new Date().toISOString(), row.id);
-      fixed++;
+      if (!row.layout.includes("data:image/")) continue;
+      try {
+        const parsed = JSON.parse(row.layout);
+        const cleaned = sanitizeLayout(parsed);
+        const cleanedStr = JSON.stringify(cleaned);
+        if (cleanedStr !== row.layout) {
+          await db.prepare("UPDATE cards SET layout = ?, updated_at = ? WHERE id = ?")
+            .runAsync(cleanedStr, new Date().toISOString(), row.id);
+          fixed++;
+        }
+      } catch { /* skip malformed rows */ }
     }
     if (fixed > 0) console.log(`✅ Cleaned base64 images from ${fixed} card(s)`);
   } catch (err) {
@@ -182,14 +201,17 @@ cardsRouter.post("/cleanup-base64", async (_req, res: Response) => {
     const rows = await db.prepare("SELECT id, layout FROM cards").allAsync() as { id: string; layout: string }[];
     let fixed = 0;
     for (const row of rows) {
-      if (!row.layout) continue;
-      const original = row.layout;
-      // Check if layout contains large base64
-      if (!/data:image\/[^;]+;base64,[A-Za-z0-9+/=]{10240,}/.test(original)) continue;
-      const cleaned = original.replace(/"data:image\/[^;]+;base64,[A-Za-z0-9+/=]{10240,}"/g, '""');
-      await db.prepare("UPDATE cards SET layout = ?, updated_at = ? WHERE id = ?")
-        .runAsync(cleaned, new Date().toISOString(), row.id);
-      fixed++;
+      if (!row.layout || !row.layout.includes("data:image/")) continue;
+      try {
+        const parsed = JSON.parse(row.layout);
+        const cleaned = sanitizeLayout(parsed);
+        const cleanedStr = JSON.stringify(cleaned);
+        if (cleanedStr !== row.layout) {
+          await db.prepare("UPDATE cards SET layout = ?, updated_at = ? WHERE id = ?")
+            .runAsync(cleanedStr, new Date().toISOString(), row.id);
+          fixed++;
+        }
+      } catch { /* skip */ }
     }
     res.json({ message: `Cleaned ${fixed} cards`, fixed });
   } catch (err) {
@@ -272,13 +294,13 @@ cardsRouter.get("/:id/analytics", authenticate, async (req: AuthRequest, res: Re
 
     const stats = await db.prepare(`
       SELECT
-        COUNT(*) as total_views,
-        COUNT(DISTINCT visitor_ip) as unique_views,
+        SUM(CASE WHEN event_type = 'view' THEN 1 ELSE 0 END) as total_views,
+        COUNT(DISTINCT CASE WHEN event_type = 'view' THEN visitor_ip END) as unique_views,
         SUM(CASE WHEN event_type LIKE '%_click' THEN 1 ELSE 0 END) as button_clicks,
         SUM(CASE WHEN event_type = 'whatsapp_click' THEN 1 ELSE 0 END) as whatsapp_clicks,
         SUM(CASE WHEN event_type = 'call_click' THEN 1 ELSE 0 END) as call_clicks,
         SUM(CASE WHEN event_type = 'qr_scan' THEN 1 ELSE 0 END) as qr_scans
-      FROM analytics WHERE card_id = ? AND event_type = 'view'
+      FROM analytics WHERE card_id = ?
     `).getAsync(req.params.id);
 
     const dailyViews = await db.prepare(`

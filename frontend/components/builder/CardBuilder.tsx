@@ -73,9 +73,20 @@ export function CardBuilder() {
   const handlePublish = async () => {
     if (!activeCard) return;
     try {
+      // Save first if there are unsaved changes
       if (isDirty) {
-        await cardsAPI.update(activeCard.id, { layout });
-        setDirty(false);
+        setSaving(true);
+        try {
+          await cardsAPI.update(activeCard.id, { layout });
+          setDirty(false);
+        } catch (saveErr: unknown) {
+          const msg = (saveErr as { response?: { data?: { message?: string } } })?.response?.data?.message || "Failed to save card";
+          toast.error(`Save failed: ${msg}`);
+          setSaving(false);
+          return; // Don't publish if save failed
+        } finally {
+          setSaving(false);
+        }
       }
       const res = await cardsAPI.publish(activeCard.id);
       const isNowPublished = res.data.card.isPublished;
@@ -90,8 +101,9 @@ export function CardBuilder() {
       } else {
         toast.success("Card unpublished");
       }
-    } catch {
-      toast.error("Failed to publish");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Failed to publish";
+      toast.error(msg);
     }
   };
 

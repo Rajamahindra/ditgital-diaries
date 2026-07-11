@@ -160,25 +160,40 @@ export default function CardsPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.08 }}
-                className="bg-white dark:bg-dark-card rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden group hover:border-secondary/30 transition-all"
+                className="bg-white dark:bg-dark-card rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden group hover:border-secondary/30 hover:shadow-lg transition-all"
               >
-                <div className="h-32 bg-gradient-to-br from-blue-600 to-violet-600 relative flex items-center justify-center overflow-hidden">
-                  {photo ? (
-                    <img src={photo} alt={name} className="w-full h-full object-cover opacity-60" />
-                  ) : (
-                    <span className="text-5xl">🪪</span>
-                  )}
-                  <div className={`absolute top-3 right-3 text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 ${card.isPublished ? "bg-green-500 text-white" : "bg-gray-500/80 text-white"}`}>
-                    {card.isPublished ? <><Globe className="w-3 h-3" /> Live</> : <><GlobeLock className="w-3 h-3" /> Draft</>}
-                  </div>
-                </div>
+                {/* Card preview banner using actual card theme colors */}
+                {(() => {
+                  const theme = card.layout?.theme as unknown as Record<string, unknown> | undefined;
+                  const primary = (theme?.primaryColor as string) || "#0F172A";
+                  const secondary = (theme?.secondaryColor as string) || "#2563EB";
+                  const accent = (theme?.accentColor as string) || "#7C3AED";
+                  const bgGradient = theme?.backgroundGradient as string | undefined;
+                  const bannerBg = bgGradient || `linear-gradient(135deg, ${primary} 0%, ${secondary} 55%, ${accent} 100%)`;
+                  return (
+                    <div className="h-32 relative flex items-end overflow-hidden" style={{ background: bannerBg }}>
+                      <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.4) 1px, transparent 1px)", backgroundSize: "16px 16px" }} />
+                      {photo && <img src={photo} alt={name} className="absolute inset-0 w-full h-full object-cover opacity-40" />}
+                      {!photo && <span className="absolute inset-0 flex items-center justify-center text-5xl opacity-30">🪪</span>}
+                      <div className="relative px-4 pb-3 flex items-end gap-3 w-full">
+                        <div className="w-12 h-12 rounded-xl border-2 border-white/80 shadow-lg bg-white/20 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                          {name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white font-semibold text-sm truncate drop-shadow">{name}</p>
+                          <p className="text-white/60 text-xs truncate font-mono">/card/{card.username}</p>
+                        </div>
+                      </div>
+                      <div className={`absolute top-3 right-3 text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 ${card.isPublished ? "bg-green-500 text-white" : "bg-black/40 text-white/80"}`}>
+                        {card.isPublished ? <><Globe className="w-3 h-3" /> Live</> : <><GlobeLock className="w-3 h-3" /> Draft</>}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div className="p-4">
-                  <h3 className="text-primary dark:text-white font-semibold truncate">{name}</h3>
-                  <p className="text-gray-400 dark:text-white/30 text-xs mt-0.5 truncate font-mono">/card/{card.username}</p>
-
                   {card.isPublished && (
-                    <div className="mt-2 flex items-center gap-1.5 bg-green-50 dark:bg-green-500/10 rounded-lg px-2.5 py-1.5">
+                    <div className="mb-3 flex items-center gap-1.5 bg-green-50 dark:bg-green-500/10 rounded-lg px-2.5 py-1.5">
                       <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
                       <span className="text-green-600 dark:text-green-400 text-xs font-medium truncate flex-1">
                         {typeof window !== "undefined" ? window.location.origin : "https://greaternewstv.com"}/card/{card.username}

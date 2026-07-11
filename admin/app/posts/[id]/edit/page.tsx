@@ -6,9 +6,11 @@ import Layout from "@/components/Layout";
 import PostForm from "@/components/PostForm";
 import { adminAPI } from "@/lib/api";
 
+import { Post } from "@/components/PostForm";
+
 export default function EditPostPage() {
   const { id } = useParams<{ id: string }>();
-  const [post, setPost] = useState(null);
+  const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

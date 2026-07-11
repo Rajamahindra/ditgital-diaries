@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 const BACKEND =
   process.env.BACKEND_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://ditgital-diaries.onrender.com";
+  "https://digital-diaries.onrender.com";
 
 async function getSiteSettings(): Promise<Record<string, string>> {
   try {

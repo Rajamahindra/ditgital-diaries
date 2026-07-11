@@ -206,13 +206,17 @@ adminRouter.get("/users", async (req: AuthRequest, res: Response) => {
     const limit = 20;
     const offset = (page - 1) * limit;
 
-    const where = search ? `WHERE name LIKE '%${search}%' OR email LIKE '%${search}%'` : "";
+    const searchParam = search ? `%${search}%` : null;
     const users = await db.prepare(
-      `SELECT id, name, email, plan, is_verified, is_banned, created_at FROM users ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`
-    ).allAsync(limit, offset);
+      searchParam
+        ? `SELECT id, name, email, plan, is_verified, is_banned, created_at FROM users WHERE name LIKE ? OR email LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?`
+        : `SELECT id, name, email, plan, is_verified, is_banned, created_at FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?`
+    ).allAsync(...(searchParam ? [searchParam, searchParam, limit, offset] : [limit, offset]));
     const totalRow = await db.prepare(
-      `SELECT COUNT(*) as count FROM users ${where}`
-    ).getAsync() as { count: number };
+      searchParam
+        ? `SELECT COUNT(*) as count FROM users WHERE name LIKE ? OR email LIKE ?`
+        : `SELECT COUNT(*) as count FROM users`
+    ).getAsync(...(searchParam ? [searchParam, searchParam] : [])) as { count: number };
 
     res.json({ users, total: totalRow.count, page });
   } catch {
@@ -285,20 +289,33 @@ adminRouter.get("/posts", async (req: AuthRequest, res: Response) => {
     const limit = 20;
     const offset = (parseInt(page as string) - 1) * limit;
 
-    let where = "WHERE p.deleted_at IS NULL";
-    if (search) where += ` AND (p.title LIKE '%${search}%' OR p.content LIKE '%${search}%')`;
-    if (category) where += ` AND p.category_id = '${category}'`;
-    if (status) where += ` AND p.status = '${status}'`;
+    const conditions: string[] = ["p.deleted_at IS NULL"];
+    const params: (string | number)[] = [];
+
+    if (search) {
+      conditions.push("(p.title LIKE ? OR p.content LIKE ?)");
+      params.push(`%${search}%`, `%${search}%`);
+    }
+    if (category) {
+      conditions.push("p.category_id = ?");
+      params.push(category as string);
+    }
+    if (status) {
+      conditions.push("p.status = ?");
+      params.push(status as string);
+    }
+
+    const where = `WHERE ${conditions.join(" AND ")}`;
 
     const posts = await db.prepare(
       `SELECT p.*, c.name as category_name FROM posts p
        LEFT JOIN categories c ON p.category_id = c.id
        ${where} ORDER BY p.created_at DESC LIMIT ? OFFSET ?`
-    ).allAsync(limit, offset);
+    ).allAsync(...params, limit, offset);
 
     const totalRow = await db.prepare(
       `SELECT COUNT(*) as count FROM posts p ${where}`
-    ).getAsync() as { count: number };
+    ).getAsync(...params) as { count: number };
     res.json({ posts, total: totalRow.count, page: parseInt(page as string) });
   } catch (err) {
     console.error(err);

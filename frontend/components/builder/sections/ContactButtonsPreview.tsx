@@ -1,43 +1,89 @@
 "use client";
 
+import { useState } from "react";
 import { Phone, Mail, MessageCircle, MapPin } from "lucide-react";
 import { useBuilderStore } from "@/lib/store";
 
-interface Props { data: Record<string, unknown> }
+interface Props { data: Record<string, unknown>; sectionId?: string; }
 
-export function ContactButtonsPreview({ data }: Props) {
-  const { layout } = useBuilderStore();
-  const { secondaryColor, darkMode } = layout.theme;
+export function ContactButtonsPreview({ data, sectionId }: Props) {
+  const { layout, updateSection, selectedSectionId } = useBuilderStore();
+  const { darkMode } = layout.theme;
+  const id = sectionId ?? selectedSectionId ?? "";
+  const update = (key: string, v: unknown) => { if (id) updateSection(id, { [key]: v }); };
 
-  const allButtons = [
-    { icon: Phone, label: "Call", value: data.phone as string, color: "#22C55E", href: `tel:${data.phone}` },
-    { icon: Mail, label: "Email", value: data.email as string, color: "#2563EB", href: `mailto:${data.email}` },
-    { icon: MessageCircle, label: "WhatsApp", value: data.whatsapp as string, color: "#25D366", href: `https://wa.me/${(data.whatsapp as string || "").replace(/\D/g, "")}` },
-    { icon: MapPin, label: "Maps", value: data.address as string, color: "#EF4444", href: `https://maps.google.com/?q=${encodeURIComponent(data.address as string || "")}` },
+  const BUTTONS = [
+    { icon: Phone,         key: "phone",    label: "Call",     color: "#22C55E" },
+    { icon: Mail,          key: "email",    label: "Email",    color: "#2563EB" },
+    { icon: MessageCircle, key: "whatsapp", label: "WhatsApp", color: "#25D366" },
+    { icon: MapPin,        key: "address",  label: "Location", color: "#EF4444" },
   ];
 
-  const buttons = allButtons.filter((b) => b.value);
-  const displayButtons = buttons.length > 0 ? buttons : allButtons.slice(0, 3);
+  const [editing, setEditing] = useState<string | null>(null);
 
   return (
     <div className="px-5 py-4">
-      <div className={`grid gap-2.5 ${displayButtons.length <= 2 ? "grid-cols-2" : displayButtons.length === 3 ? "grid-cols-3" : "grid-cols-4"}`}>
-        {displayButtons.map(({ icon: Icon, label, color, href, value }) => (
-          <a
-            key={label}
-            href={value ? href : undefined}
-            target={value ? "_blank" : undefined}
-            rel="noopener noreferrer"
-            className="flex flex-col items-center gap-1.5 py-3.5 rounded-2xl transition-all hover:scale-105 active:scale-95"
-            style={{ background: `${color}12`, border: `1px solid ${color}25` }}
-            onClick={(e) => !value && e.preventDefault()}
-          >
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${color}20` }}>
-              <Icon className="w-4.5 h-4.5" style={{ color }} />
+      <div className="grid grid-cols-4 gap-2">
+        {BUTTONS.map(({ icon: Icon, key, label, color }) => {
+          const value = (data[key] as string) || "";
+          const isEditing = editing === key;
+
+          return (
+            <div key={key} className="flex flex-col items-center gap-1">
+              <div
+                className="w-full flex flex-col items-center gap-1.5 py-3 rounded-2xl transition-all cursor-pointer group"
+                style={{ background: `${color}12`, border: `1px solid ${color}25` }}
+                onClick={() => setEditing(isEditing ? null : key)}
+                title={`Click to edit ${label}`}
+              >
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${color}20` }}>
+                  <Icon className="w-4 h-4" style={{ color }} />
+                </div>
+                <span className="text-xs font-medium" style={{ color: darkMode ? "rgba(248,250,252,0.7)" : "#374151" }}>
+                  {label}
+                </span>
+              </div>
+              {/* Inline input below the button when editing */}
+              {isEditing && (
+                <input
+                  autoFocus
+                  value={value}
+                  placeholder={key === "email" ? "you@email.com" : key === "address" ? "City, State" : "+91 98765..."}
+                  onChange={(e) => update(key, e.target.value)}
+                  onBlur={() => setEditing(null)}
+                  onKeyDown={(e) => { if (e.key === "Enter") setEditing(null); }}
+                  className="w-full text-xs rounded-lg px-2 py-1 outline-none border"
+                  style={{
+                    background: darkMode ? "rgba(255,255,255,0.07)" : "#F8FAFC",
+                    border: `1.5px solid ${color}60`,
+                    color: darkMode ? "#F8FAFC" : "#0F172A",
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              )}
+              {/* Show current value hint */}
+              {!isEditing && value && (
+                <span
+                  className="text-xs truncate w-full text-center cursor-pointer"
+                  style={{ color: color, opacity: 0.8 }}
+                  title={value}
+                  onClick={() => setEditing(key)}
+                >
+                  {value.length > 10 ? value.slice(0, 10) + "…" : value}
+                </span>
+              )}
+              {!isEditing && !value && (
+                <span
+                  className="text-xs truncate w-full text-center cursor-pointer opacity-30"
+                  style={{ color: darkMode ? "#F8FAFC" : "#374151" }}
+                  onClick={() => setEditing(key)}
+                >
+                  tap to add
+                </span>
+              )}
             </div>
-            <span className="text-xs font-medium" style={{ color: darkMode ? "rgba(248,250,252,0.7)" : "#374151" }}>{label}</span>
-          </a>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

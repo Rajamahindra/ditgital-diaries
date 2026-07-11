@@ -21,56 +21,123 @@ import { TextPreview } from "./sections/TextPreview";
 import { TestimonialsPreview } from "./sections/TestimonialsPreview";
 import { BusinessHoursPreview } from "./sections/BusinessHoursPreview";
 import { PortfolioPreview } from "./sections/PortfolioPreview";
+import { InlineImageUpload } from "./sections/InlineEditHelpers";
+import { useState } from "react";
+
+function InlineEditableCaption({ sectionId, value }: { sectionId: string; value: string }) {
+  const { updateSection } = useBuilderStore();
+  const [editing, setEditing] = useState(false);
+  if (!value && !editing) return (
+    <p
+      className="text-xs text-center mt-1 text-gray-300 dark:text-white/20 cursor-text hover:text-indigo-400 transition-colors italic"
+      onClick={() => setEditing(true)}
+    >click to add caption</p>
+  );
+  if (editing) return (
+    <input autoFocus value={value} placeholder="Caption…"
+      onChange={(e) => updateSection(sectionId, { caption: e.target.value })}
+      onBlur={() => setEditing(false)}
+      onKeyDown={(e) => { if (e.key === "Enter") setEditing(false); }}
+      className="w-full text-xs text-center mt-1 outline-none bg-transparent border-b border-indigo-300 text-gray-500 dark:text-white/50" />
+  );
+  return (
+    <p className="text-xs opacity-50 mt-1 text-center cursor-text hover:opacity-80 transition-opacity"
+      onClick={() => setEditing(true)}>{value}</p>
+  );
+}
+
+function InlineEditableVideoUrl({ sectionId, value, title }: { sectionId: string; value: string; title: string }) {
+  const { updateSection } = useBuilderStore();
+  const [editingUrl, setEditingUrl] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  return (
+    <div className="space-y-2">
+      <div className="w-full h-24 rounded-xl bg-gray-900 flex items-center justify-center text-white/40 text-xs gap-2 cursor-pointer hover:bg-gray-800 transition-colors"
+        onClick={() => setEditingTitle(true)}>
+        <span>▶</span>
+        {editingTitle
+          ? <input autoFocus value={title} placeholder="Video title"
+              onChange={(e) => updateSection(sectionId, { title: e.target.value })}
+              onBlur={() => setEditingTitle(false)}
+              onKeyDown={(e) => { if (e.key === "Enter") setEditingTitle(false); }}
+              className="bg-transparent outline-none border-b border-white/30 text-white/60 text-xs w-32"
+              onClick={(e) => e.stopPropagation()} />
+          : <span>{title || "Click to set title"}</span>
+        }
+      </div>
+      {editingUrl
+        ? <input autoFocus value={value} placeholder="https://youtube.com/..."
+            onChange={(e) => updateSection(sectionId, { url: e.target.value })}
+            onBlur={() => setEditingUrl(false)}
+            onKeyDown={(e) => { if (e.key === "Enter") setEditingUrl(false); }}
+            className="w-full text-xs rounded-lg px-2 py-1.5 outline-none border border-indigo-300 bg-gray-50 dark:bg-white/5 text-gray-700 dark:text-white" />
+        : <span onClick={() => setEditingUrl(true)}
+            className="block text-xs cursor-text text-gray-400 dark:text-white/30 truncate px-2 py-1 rounded hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors">
+            {value || <span className="italic opacity-40">click to add video URL…</span>}
+          </span>
+      }
+    </div>
+  );
+}
+
+function CanvasImageSection({ section }: { section: CardSection }) {
+  const { updateSection } = useBuilderStore();
+  return (
+    <div className="px-4 py-3">
+      <InlineImageUpload
+        value={(section.data.url as string) || ""}
+        onChange={(url) => updateSection(section.id, { url })}
+        aspectClass="w-full h-40"
+      />
+      <InlineEditableCaption sectionId={section.id} value={(section.data.caption as string) || ""} />
+    </div>
+  );
+}
+
+function CanvasGallerySection({ section }: { section: CardSection }) {
+  const { updateSection } = useBuilderStore();
+  const images: { id: string; url: string }[] = (section.data.images as { id: string; url: string }[]) || [];
+  const visible = images.filter(i => i.url);
+  return (
+    <div className="px-4 py-3">
+      {visible.length === 0
+        ? <div className="w-full h-16 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-300 dark:text-white/20 text-xs cursor-pointer hover:border-indigo-400 border-2 border-dashed border-gray-200 dark:border-white/10 transition-colors"
+            onClick={() => updateSection(section.id, { images: [...images, { id: crypto.randomUUID(), url: "" }] })}>
+            Click to add photos
+          </div>
+        : <div className="grid grid-cols-3 gap-1.5">
+            {visible.slice(0, 6).map(img => (
+              <img key={img.id} src={img.url} alt="" className="w-full h-16 object-cover rounded-lg" />
+            ))}
+          </div>
+      }
+    </div>
+  );
+}
 
 function SectionRenderer({ section }: { section: CardSection }) {
   switch (section.type) {
-    case "profile": return <ProfileSectionPreview data={section.data} />;
-    case "contact_buttons": return <ContactButtonsPreview data={section.data} />;
-    case "social_links": return <SocialLinksPreview data={section.data} />;
-    case "services": return <ServicesPreview data={section.data} />;
-    case "lead_form": return <LeadFormPreview data={section.data} />;
-    case "cta": return <CTAPreview data={section.data} />;
-    case "map": return <MapPreview data={section.data} />;
-    case "text": return <TextPreview data={section.data} />;
-    case "testimonials": return <TestimonialsPreview data={section.data} />;
-    case "business_hours": return <BusinessHoursPreview data={section.data} />;
-    case "portfolio": return <PortfolioPreview data={section.data} />;
+    case "profile": return <ProfileSectionPreview data={section.data} sectionId={section.id} />;
+    case "contact_buttons": return <ContactButtonsPreview data={section.data} sectionId={section.id} />;
+    case "social_links": return <SocialLinksPreview data={section.data} sectionId={section.id} />;
+    case "services": return <ServicesPreview data={section.data} sectionId={section.id} />;
+    case "lead_form": return <LeadFormPreview data={section.data} sectionId={section.id} />;
+    case "cta": return <CTAPreview data={section.data} sectionId={section.id} />;
+    case "map": return <MapPreview data={section.data} sectionId={section.id} />;
+    case "text": return <TextPreview data={section.data} sectionId={section.id} />;
+    case "testimonials": return <TestimonialsPreview data={section.data} sectionId={section.id} />;
+    case "business_hours": return <BusinessHoursPreview data={section.data} sectionId={section.id} />;
+    case "portfolio": return <PortfolioPreview data={section.data} sectionId={section.id} />;
     case "image":
-      return (
-        <div className="px-4 py-3">
-          {section.data.url ? (
-            <img src={section.data.url as string} alt="Image" className="w-full rounded-xl object-cover max-h-40" />
-          ) : (
-            <div className="w-full h-24 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-300 dark:text-white/20 text-xs">Click to add image</div>
-          )}
-          {section.data.caption && <p className="text-xs opacity-50 mt-1 text-center">{section.data.caption as string}</p>}
-        </div>
-      );
+      return <CanvasImageSection section={section} />;
     case "video":
       return (
         <div className="px-4 py-3">
-          <div className="w-full h-24 rounded-xl bg-gray-900 flex items-center justify-center text-white/40 text-xs gap-2">
-            <span>▶</span> {section.data.title as string || "Video"}
-          </div>
+          <InlineEditableVideoUrl sectionId={section.id} value={(section.data.url as string) || ""} title={(section.data.title as string) || ""} />
         </div>
       );
-    case "gallery": {
-      const images = (section.data.images as { id: string; url: string }[]) || [];
-      const visible = images.filter(i => i.url);
-      return (
-        <div className="px-4 py-3">
-          {visible.length === 0 ? (
-            <div className="w-full h-16 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-300 dark:text-white/20 text-xs">Add photos to gallery</div>
-          ) : (
-            <div className="grid grid-cols-3 gap-1.5">
-              {visible.slice(0, 6).map(img => (
-                <img key={img.id} src={img.url} alt="" className="w-full h-16 object-cover rounded-lg" />
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    }
+    case "gallery":
+      return <CanvasGallerySection section={section} />;
     default:
       return (
         <div className="px-4 py-6 text-center text-gray-400 dark:text-white/30 text-sm">

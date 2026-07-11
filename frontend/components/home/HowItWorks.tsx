@@ -4,27 +4,27 @@ import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import { UserPlus, Wand2, Share2 } from "lucide-react";
 
-const steps = [
+const STEPS = [
   {
-    icon: UserPlus,
-    step: "01",
-    title: "Sign Up Free",
-    description: "Create your account in 30 seconds. No credit card required.",
+    n: "01",
+    Icon: UserPlus,
+    title: "Sign up free",
+    body: "Create your account in 30 seconds. No credit card. Just your email.",
+    color: "#6366F1",
+  },
+  {
+    n: "02",
+    Icon: Wand2,
+    title: "AI builds your card",
+    body: "Describe yourself — the AI writes your bio, picks a design, adds your services.",
     color: "#2563EB",
   },
   {
-    icon: Wand2,
-    step: "02",
-    title: "AI Builds Your Card",
-    description: "Describe yourself and our AI generates a complete professional card with bio, services, and design.",
-    color: "#7C3AED",
-  },
-  {
-    icon: Share2,
-    step: "03",
-    title: "Share Your Live URL",
-    description: "Get your unique URL like digitaldiaries.com/card/yourname and share it everywhere.",
-    color: "#06B6D4",
+    n: "03",
+    Icon: Share2,
+    title: "Share your live URL",
+    body: "Your card is live instantly at digitaldiaries.com/card/yourname.",
+    color: "#0891B2",
   },
 ];
 
@@ -32,55 +32,47 @@ export function HowItWorks() {
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
 
   return (
-    <section className="bg-primary section-padding" ref={ref}>
-      <div className="max-w-7xl mx-auto">
+    <section className="bg-[#F7F8FC] dark:bg-[#0D1321] section-padding" ref={ref}>
+      <div className="max-w-6xl mx-auto">
+
+        {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          transition={{ duration: 0.55 }}
+          className="mb-16"
         >
-          <span className="text-secondary text-sm font-semibold uppercase tracking-widest">
-            Simple Process
-          </span>
-          <h2 className="text-4xl lg:text-5xl font-display font-black text-white mt-3 mb-4">
-            Up and running in{" "}
-            <span className="gradient-text">3 steps</span>
-          </h2>
-          <p className="text-white/50 text-lg max-w-xl mx-auto">
-            From zero to a live professional digital identity in under 2 minutes.
+          <p className="text-indigo-600 dark:text-indigo-400 text-sm font-semibold tracking-widest uppercase mb-3">
+            How it works
           </p>
+          <h2 className="text-4xl lg:text-5xl font-black text-gray-900 dark:text-white max-w-md">
+            Live in under<br />
+            <span className="text-indigo-600 dark:text-indigo-400">three steps.</span>
+          </h2>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-8 relative">
-          {/* Connector line */}
-          <div className="hidden md:block absolute top-16 left-1/3 right-1/3 h-px bg-gradient-to-r from-secondary via-accent to-cyan-500 opacity-30" />
-
-          {steps.map(({ icon: Icon, step, title, description, color }, i) => (
+        {/* Steps */}
+        <div className="grid md:grid-cols-3 gap-px bg-gray-200 dark:bg-white/8 rounded-2xl overflow-hidden">
+          {STEPS.map(({ n, Icon, title, body, color }, i) => (
             <motion.div
-              key={step}
-              initial={{ opacity: 0, y: 40 }}
+              key={n}
+              initial={{ opacity: 0, y: 24 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.6, delay: i * 0.15 }}
-              className="relative group"
+              transition={{ duration: 0.55, delay: i * 0.12 }}
+              className="bg-white dark:bg-[#0D1321] p-8 lg:p-10 relative group hover:bg-[#F0F4FF] dark:hover:bg-[#111827] transition-colors duration-300"
             >
-              <div className="bg-dark-card rounded-2xl p-8 border border-white/5 hover:border-white/10 transition-all duration-300 hover:-translate-y-2 hover:shadow-premium">
-                {/* Step number */}
-                <div className="text-6xl font-black text-white/5 absolute top-4 right-6 font-display">
-                  {step}
-                </div>
+              {/* Step number — large background */}
+              <span className="absolute top-6 right-7 text-6xl font-black text-gray-100 dark:text-white/[0.04] select-none leading-none">
+                {n}
+              </span>
 
-                {/* Icon */}
-                <div
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-lg"
-                  style={{ background: `${color}20`, border: `1px solid ${color}30` }}
-                >
-                  <Icon className="w-7 h-7" style={{ color }} />
-                </div>
-
-                <h3 className="text-white font-display font-bold text-xl mb-3">{title}</h3>
-                <p className="text-white/50 leading-relaxed">{description}</p>
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-7"
+                style={{ background: `${color}15`, border: `1px solid ${color}25` }}>
+                <Icon className="w-5 h-5" style={{ color }} />
               </div>
+
+              <h3 className="text-gray-900 dark:text-white font-bold text-xl mb-3">{title}</h3>
+              <p className="text-gray-500 dark:text-white/45 text-[15px] leading-relaxed">{body}</p>
             </motion.div>
           ))}
         </div>

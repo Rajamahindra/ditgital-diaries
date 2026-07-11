@@ -65,7 +65,3 @@ async function exec(sql: string): Promise<void> {
 }
 
 export const db = { prepare, exec };
-
-import { runMigrations } from "./migrate";
-// migrations run async on startup
-runMigrations().catch(console.error);
