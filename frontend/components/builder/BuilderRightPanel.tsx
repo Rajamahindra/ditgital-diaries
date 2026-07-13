@@ -58,14 +58,15 @@ function ImageUploadField({ label, value, onChange, icon, aspectClass }: {
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [cloudinaryWarning, setCloudinaryWarning] = useState(false);
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setUploading(true);
+    setCloudinaryWarning(false);
     try {
-      // Try to upload to backend first, fallback to compressed base64
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
       const { default: Cookies } = await import("js-cookie");
       const token = Cookies.get("dd_token");
@@ -81,16 +82,21 @@ function ImageUploadField({ label, value, onChange, icon, aspectClass }: {
 
       if (res.ok) {
         const data = await res.json();
+        // Show warning if Cloudinary not configured — image won't persist after save
+        if (data.provider === "base64" || data.warning) {
+          setCloudinaryWarning(true);
+        }
         onChange(data.url);
       } else {
-        // Fallback: compress and store as base64 (small)
+        // Final fallback to local canvas compression
         const b64 = await uploadImageFallback(file);
+        setCloudinaryWarning(true);
         onChange(b64);
       }
     } catch {
-      // Final fallback
       try {
         const b64 = await uploadImageFallback(file);
+        setCloudinaryWarning(true);
         onChange(b64);
       } catch {
         // ignore
@@ -104,6 +110,11 @@ function ImageUploadField({ label, value, onChange, icon, aspectClass }: {
   return (
     <div>
       <label className={labelCls}>{label}</label>
+      {cloudinaryWarning && (
+        <div className="mb-2 px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
+          ⚠️ Image storage not configured — this image may not appear on your published card. Contact admin to set up Cloudinary.
+        </div>
+      )}
       <div
         onClick={() => !uploading && fileRef.current?.click()}
         className={`relative w-full ${aspectClass} rounded-xl border-2 border-dashed border-gray-200 dark:border-white/10 overflow-hidden cursor-pointer group hover:border-secondary/50 transition-all`}

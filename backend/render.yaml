@@ -25,8 +25,8 @@ services:
       - key: OPENAI_API_KEY
         value: ""
       - key: CLOUDINARY_CLOUD_NAME
-        value: ""
+        value: "lel6elvz"
       - key: CLOUDINARY_API_KEY
-        value: ""
+        value: "519828233213619"
       - key: CLOUDINARY_API_SECRET
-        value: ""
+        value: "prFJTUU6A_JsIk35ZRDFELM_6PQ"
