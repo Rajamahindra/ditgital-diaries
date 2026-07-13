@@ -3,48 +3,76 @@
 import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Search } from "lucide-react";
 
 export function FinalCTA() {
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
 
   return (
-    <section className="bg-[#F5F3FF] dark:bg-[#0C0A1A] section-padding" ref={ref}>
+    <section className="bg-[#F8F7FF] dark:bg-[#0C0A1A] section-padding" ref={ref}>
       <div className="max-w-6xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="relative bg-[#1E1B4B] rounded-3xl px-8 py-16 lg:px-16 lg:py-20 overflow-hidden"
-        >
-          {/* Brand accent glows */}
-          <div className="absolute top-0 right-0 w-80 h-80 rounded-full"
-            style={{ background: "radial-gradient(circle, rgba(139,92,246,0.2) 0%, transparent 70%)", transform: "translate(30%, -30%)" }} />
-          <div className="absolute bottom-0 left-24 w-64 h-64 rounded-full"
-            style={{ background: "radial-gradient(circle, rgba(79,70,229,0.15) 0%, transparent 70%)", transform: "translateY(40%)" }} />
+        <div className="grid lg:grid-cols-2 gap-5">
 
-          <div className="relative max-w-2xl">
-            <p className="text-violet-400 text-sm font-semibold tracking-widest uppercase mb-5">
-              Get started today
-            </p>
-            <h2 className="text-4xl lg:text-5xl font-black text-white mb-5 leading-tight">
-              Your professional identity<br />
-              deserves better than a PDF.
-            </h2>
-            <p className="text-violet-300/50 text-lg mb-10 max-w-md">
-              Join 50,000+ professionals who already use Digital Diaries to get discovered, capture leads, and stand out.
-            </p>
-
-            <div className="flex flex-wrap items-center gap-4">
-              <Link href="/register"
-                className="group inline-flex items-center gap-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-semibold text-[15px] py-4 px-8 rounded-xl shadow-[0_0_0_1px_rgba(139,92,246,0.5),0_8px_24px_rgba(109,40,217,0.35)] hover:shadow-[0_12px_32px_rgba(109,40,217,0.5)] transition-all duration-200">
-                Create your free card
+          {/* For creators */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.5 }}
+            className="relative bg-[#1E1B4B] rounded-2xl p-8 lg:p-10 overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-48 h-48 rounded-full"
+              style={{ background: "radial-gradient(circle, rgba(139,92,246,0.2) 0%, transparent 70%)", transform: "translate(30%, -30%)" }} />
+            <div className="relative">
+              <p className="text-violet-400 text-xs font-semibold tracking-widest uppercase mb-4">
+                For professionals
+              </p>
+              <h3 className="text-white text-2xl lg:text-3xl font-black leading-tight mb-3">
+                Your skills deserve<br />a proper home.
+              </h3>
+              <p className="text-white/50 text-sm leading-relaxed mb-7 max-w-xs">
+                Stop sharing PDFs and screenshots. Create a card that's live, shareable, and represents you properly.
+              </p>
+              <Link
+                href="/register"
+                className="group inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white font-semibold text-sm px-5 py-3 rounded-lg transition-colors"
+              >
+                Create your card free
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </Link>
-              <span className="text-violet-300/30 text-sm">No credit card · Free forever plan</span>
+              <p className="text-white/25 text-xs mt-4">No credit card · Free forever plan</p>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+
+          {/* For hirers */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.5, delay: 0.12 }}
+            className="relative bg-[#052E16] rounded-2xl p-8 lg:p-10 overflow-hidden"
+          >
+            <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full"
+              style={{ background: "radial-gradient(circle, rgba(5,150,105,0.2) 0%, transparent 70%)", transform: "translate(-30%, 30%)" }} />
+            <div className="relative">
+              <p className="text-emerald-400 text-xs font-semibold tracking-widest uppercase mb-4">
+                Looking to hire
+              </p>
+              <h3 className="text-white text-2xl lg:text-3xl font-black leading-tight mb-3">
+                The right person<br />is one search away.
+              </h3>
+              <p className="text-white/50 text-sm leading-relaxed mb-7 max-w-xs">
+                Browse verified professionals by category and city. See their work, read their profile, contact them directly.
+              </p>
+              <Link
+                href="/discover"
+                className="group inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm px-5 py-3 rounded-lg transition-colors"
+              >
+                <Search className="w-4 h-4" />
+                Find a professional
+              </Link>
+              <p className="text-white/25 text-xs mt-4">Free to browse · No sign-up needed</p>
+            </div>
+          </motion.div>
+        </div>
       </div>
     </section>
   );

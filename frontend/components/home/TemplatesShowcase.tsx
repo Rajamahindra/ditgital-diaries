@@ -5,106 +5,95 @@ import { useInView } from "react-intersection-observer";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-const CATEGORIES = ["All", "Doctor", "Engineer", "Lawyer", "Photographer", "Consultant", "Real Estate", "Startup"];
-
 const TEMPLATES = [
-  { id: "1", name: "Luxury Medical", category: "Doctor", gradient: "from-blue-600 to-cyan-500", emoji: "👨‍⚕️", isPremium: false },
-  { id: "2", name: "Tech Founder", category: "Startup", gradient: "from-violet-600 to-purple-500", emoji: "🚀", isPremium: false },
-  { id: "3", name: "Creative Studio", category: "Photographer", gradient: "from-pink-600 to-rose-500", emoji: "📸", isPremium: true },
-  { id: "4", name: "Legal Pro", category: "Lawyer", gradient: "from-amber-600 to-orange-500", emoji: "⚖️", isPremium: true },
-  { id: "5", name: "Real Estate Elite", category: "Real Estate", gradient: "from-emerald-600 to-teal-500", emoji: "🏠", isPremium: false },
-  { id: "6", name: "Engineering Hub", category: "Engineer", gradient: "from-slate-600 to-gray-500", emoji: "⚙️", isPremium: false },
+  { id: "1", name: "Medical Professional", category: "Doctor / Healthcare", gradient: "135deg, #1e3a5f 0%, #2563EB 100%", tag: "Popular" },
+  { id: "2", name: "Tech & Startup",       category: "Founder / Engineer",  gradient: "135deg, #2e1065 0%, #7C3AED 100%", tag: "Popular" },
+  { id: "3", name: "Creative Portfolio",   category: "Designer / Photographer", gradient: "135deg, #4a044e 0%, #EC4899 100%", tag: null },
+  { id: "4", name: "Legal Practice",       category: "Lawyer / CA",         gradient: "135deg, #451a03 0%, #D97706 100%", tag: "Pro" },
+  { id: "5", name: "Real Estate",          category: "Agent / Broker",      gradient: "135deg, #052e16 0%, #059669 100%", tag: null },
+  { id: "6", name: "Minimalist",           category: "All professions",     gradient: "135deg, #1e293b 0%, #475569 100%", tag: null },
 ];
 
 export function TemplatesShowcase() {
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.05 });
 
   return (
-    <section className="bg-surface dark:bg-dark-surface section-padding" ref={ref}>
-      <div className="max-w-7xl mx-auto">
+    <section className="bg-white dark:bg-[#0E0C1E] section-padding" ref={ref}>
+      <div className="max-w-6xl mx-auto">
+
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-12"
+          transition={{ duration: 0.5 }}
+          className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 mb-12"
         >
-          <span className="text-secondary text-sm font-semibold uppercase tracking-widest">
-            Template Library
-          </span>
-          <h2 className="text-4xl lg:text-5xl font-display font-black text-primary dark:text-white mt-3 mb-4">
-            Start with a{" "}
-            <span className="gradient-text">premium template</span>
-          </h2>
-          <p className="text-gray-500 dark:text-white/50 text-lg max-w-xl mx-auto">
-            100+ professionally designed templates for every industry.
-          </p>
+          <div>
+            <p className="text-violet-600 dark:text-violet-400 text-sm font-semibold tracking-widest uppercase mb-3">
+              Templates
+            </p>
+            <h2 className="text-4xl lg:text-5xl font-black text-gray-900 dark:text-white leading-tight">
+              Start from a template.<br />
+              <span className="text-gray-400 dark:text-white/30">Make it yours.</span>
+            </h2>
+          </div>
+          <Link
+            href="/templates"
+            className="inline-flex items-center gap-2 text-violet-600 dark:text-violet-400 font-semibold text-sm hover:gap-3 transition-all self-start lg:self-auto"
+          >
+            View all templates <ArrowRight className="w-4 h-4" />
+          </Link>
         </motion.div>
 
-        {/* Category filter */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={inView ? { opacity: 1 } : {}}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="flex flex-wrap gap-2 justify-center mb-10"
-        >
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              className="px-4 py-2 rounded-full text-sm font-medium border border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/60 hover:border-secondary hover:text-secondary transition-all"
-            >
-              {cat}
-            </button>
-          ))}
-        </motion.div>
-
-        {/* Templates grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-          {TEMPLATES.map(({ id, name, category, gradient, emoji, isPremium }, i) => (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {TEMPLATES.map(({ id, name, category, gradient, tag }, i) => (
             <motion.div
               key={id}
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: i * 0.08 }}
-              className="group relative bg-white dark:bg-dark-card rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5 hover:border-secondary/30 transition-all duration-300 hover:-translate-y-2 hover:shadow-card-hover cursor-pointer"
+              transition={{ duration: 0.45, delay: i * 0.07 }}
+              className="group relative bg-white dark:bg-white/[0.03] rounded-xl border border-gray-100 dark:border-white/[0.07] overflow-hidden hover:border-gray-300 dark:hover:border-white/15 transition-all"
             >
-              {/* Template preview */}
-              <div className={`h-48 bg-gradient-to-br ${gradient} relative overflow-hidden`}>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-6xl">{emoji}</span>
-                </div>
-                <div className="absolute inset-0 bg-black/20" />
-                {isPremium && (
-                  <div className="absolute top-3 right-3 bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                    PRO
-                  </div>
+              {/* Preview swatch */}
+              <div
+                className="h-36 relative"
+                style={{ background: `linear-gradient(${gradient})` }}
+              >
+                {tag && (
+                  <span className={`absolute top-3 right-3 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    tag === "Pro"
+                      ? "bg-amber-500/90 text-white"
+                      : "bg-white/20 text-white backdrop-blur-sm"
+                  }`}>
+                    {tag}
+                  </span>
                 )}
+                {/* Mini card skeleton inside */}
+                <div className="absolute bottom-4 left-4 right-4 bg-white/10 backdrop-blur-sm rounded-lg p-2.5 border border-white/20">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-md bg-white/20" />
+                    <div className="space-y-1 flex-1">
+                      <div className="h-1.5 bg-white/30 rounded-full w-2/3" />
+                      <div className="h-1 bg-white/20 rounded-full w-1/2" />
+                    </div>
+                  </div>
+                </div>
                 {/* Hover overlay */}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <Link
-                    href={`/templates/${id}`}
-                    className="bg-white text-primary font-semibold text-sm px-5 py-2.5 rounded-xl hover:bg-gray-100 transition-colors"
+                    href={`/templates`}
+                    className="bg-white text-gray-900 font-semibold text-xs px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
                   >
-                    Use Template
+                    Use this template
                   </Link>
                 </div>
               </div>
 
-              <div className="p-4">
-                <h3 className="text-primary dark:text-white font-semibold">{name}</h3>
-                <p className="text-gray-400 dark:text-white/40 text-sm">{category}</p>
+              <div className="px-4 py-3">
+                <p className="text-gray-900 dark:text-white font-semibold text-sm">{name}</p>
+                <p className="text-gray-400 dark:text-white/30 text-xs mt-0.5">{category}</p>
               </div>
             </motion.div>
           ))}
-        </div>
-
-        <div className="text-center">
-          <Link
-            href="/templates"
-            className="inline-flex items-center gap-2 text-secondary font-semibold hover:gap-3 transition-all"
-          >
-            View all templates
-            <ArrowRight className="w-4 h-4" />
-          </Link>
         </div>
       </div>
     </section>

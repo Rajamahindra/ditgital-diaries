@@ -2,113 +2,168 @@
 
 import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
-import { Search, MapPin } from "lucide-react";
+import { MapPin, ArrowRight, Star } from "lucide-react";
 import Link from "next/link";
 
-const PROFESSIONALS = [
-  { name: "Dr. Priya Mehta", role: "Dermatologist", location: "Mumbai", emoji: "👩‍⚕️", color: "#2563EB" },
-  { name: "Rahul Verma", role: "Architect", location: "Delhi", emoji: "🏗️", color: "#7C3AED" },
-  { name: "Sneha Kapoor", role: "Photographer", location: "Bangalore", emoji: "📸", color: "#EC4899" },
-  { name: "Amit Shah", role: "CA & Tax Advisor", location: "Ahmedabad", emoji: "💼", color: "#10B981" },
-  { name: "Kavya Reddy", role: "Interior Designer", location: "Hyderabad", emoji: "🎨", color: "#F59E0B" },
-  { name: "Rohan Nair", role: "Software Engineer", location: "Pune", emoji: "💻", color: "#06B6D4" },
+const CATEGORIES = [
+  { label: "Doctors",           count: "2,400+", color: "#2563EB", bg: "#EFF6FF", darkBg: "rgba(37,99,235,0.1)", emoji: "🩺" },
+  { label: "Photographers",     count: "890+",   color: "#EC4899", bg: "#FDF2F8", darkBg: "rgba(236,72,153,0.1)",emoji: "📸" },
+  { label: "Lawyers",           count: "1,200+", color: "#D97706", bg: "#FFFBEB", darkBg: "rgba(217,119,6,0.1)", emoji: "⚖️" },
+  { label: "Interior Designers",count: "640+",   color: "#7C3AED", bg: "#F5F3FF", darkBg: "rgba(124,58,237,0.1)",emoji: "🎨" },
+  { label: "Architects",        count: "530+",   color: "#0891B2", bg: "#ECFEFF", darkBg: "rgba(8,145,178,0.1)", emoji: "🏗️" },
+  { label: "Consultants",       count: "3,100+", color: "#059669", bg: "#ECFDF5", darkBg: "rgba(5,150,105,0.1)", emoji: "💼" },
+];
+
+const FEATURED = [
+  {
+    name: "Dr. Priya Mehta",
+    role: "Dermatologist",
+    location: "Mumbai",
+    rating: 4.9,
+    reviews: 128,
+    available: true,
+    color: "#2563EB",
+    initials: "PM",
+  },
+  {
+    name: "Rahul Sharma",
+    role: "Product Designer",
+    location: "Bangalore",
+    rating: 5.0,
+    reviews: 64,
+    available: true,
+    color: "#7C3AED",
+    initials: "RS",
+  },
+  {
+    name: "Sneha Kapoor",
+    role: "Wedding Photographer",
+    location: "Delhi",
+    rating: 4.8,
+    reviews: 211,
+    available: false,
+    color: "#EC4899",
+    initials: "SK",
+  },
 ];
 
 export function DiscoverSection() {
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.05 });
 
   return (
-    <section className="bg-primary section-padding" ref={ref}>
-      <div className="max-w-7xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-12"
-        >
-          <span className="text-secondary text-sm font-semibold uppercase tracking-widest">
-            Business Discovery
-          </span>
-          <h2 className="text-4xl lg:text-5xl font-display font-black text-white mt-3 mb-4">
-            Discover{" "}
-            <span className="gradient-text">professionals</span>{" "}
-            near you
-          </h2>
-          <p className="text-white/50 text-lg max-w-xl mx-auto">
-            Search doctors, photographers, lawyers, and more by profession and location.
-          </p>
-        </motion.div>
+    <section className="bg-white dark:bg-[#0E0C1E] section-padding" ref={ref}>
+      <div className="max-w-6xl mx-auto">
 
-        {/* Search bar */}
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="max-w-2xl mx-auto mb-12"
+          transition={{ duration: 0.5 }}
+          className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-12"
         >
-          <div className="flex gap-3 bg-dark-card rounded-2xl p-2 border border-white/10">
-            <div className="flex-1 flex items-center gap-3 px-3">
-              <Search className="w-5 h-5 text-white/30" />
-              <input
-                type="text"
-                placeholder="Search profession... e.g. Doctors"
-                className="flex-1 bg-transparent text-white placeholder-white/30 outline-none text-sm"
-              />
-            </div>
-            <div className="flex items-center gap-2 px-3 border-l border-white/10">
-              <MapPin className="w-4 h-4 text-white/30" />
-              <input
-                type="text"
-                placeholder="Location"
-                className="w-28 bg-transparent text-white placeholder-white/30 outline-none text-sm"
-              />
-            </div>
-            <Link href="/discover" className="btn-gradient text-sm py-2.5 px-5 whitespace-nowrap">
-              Search
-            </Link>
+          <div>
+            <p className="text-violet-600 dark:text-violet-400 text-sm font-semibold tracking-widest uppercase mb-3">
+              Discover professionals
+            </p>
+            <h2 className="text-4xl lg:text-5xl font-black text-gray-900 dark:text-white leading-tight">
+              Find who you need.<br />
+              <span className="text-gray-400 dark:text-white/40">Right here.</span>
+            </h2>
           </div>
+          <Link
+            href="/discover"
+            className="inline-flex items-center gap-2 text-violet-600 dark:text-violet-400 font-semibold text-sm hover:gap-3 transition-all self-start lg:self-auto"
+          >
+            Browse all professionals
+            <ArrowRight className="w-4 h-4" />
+          </Link>
         </motion.div>
 
-        {/* Professionals grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {PROFESSIONALS.map(({ name, role, location, emoji, color }, i) => (
+        {/* Category grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-12">
+          {CATEGORIES.map(({ label, count, color, bg, darkBg, emoji }, i) => (
             <motion.div
-              key={name}
-              initial={{ opacity: 0, y: 30 }}
+              key={label}
+              initial={{ opacity: 0, y: 16 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: i * 0.08 }}
-              className="group bg-dark-card rounded-2xl p-5 border border-white/5 hover:border-white/15 transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+              transition={{ duration: 0.4, delay: i * 0.06 }}
             >
-              <div className="flex items-center gap-4">
-                <div
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
-                  style={{ background: `${color}20`, border: `1px solid ${color}30` }}
-                >
-                  {emoji}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-white font-semibold truncate">{name}</h3>
-                  <p className="text-white/50 text-sm">{role}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <MapPin className="w-3 h-3 text-white/30" />
-                    <span className="text-white/30 text-xs">{location}</span>
-                  </div>
-                </div>
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{ background: `${color}20` }}
-                >
-                  <span className="text-xs" style={{ color }}>→</span>
-                </div>
-              </div>
+              <Link
+                href={`/discover?category=${label.toLowerCase().replace(" ", "-")}`}
+                className="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-100 dark:border-white/[0.07] hover:border-gray-300 dark:hover:border-white/20 bg-white dark:bg-white/[0.03] hover:bg-gray-50 dark:hover:bg-white/[0.05] transition-all text-center group"
+              >
+                <span className="text-2xl">{emoji}</span>
+                <p className="text-gray-800 dark:text-white font-semibold text-xs leading-tight">{label}</p>
+                <p className="text-xs" style={{ color }}>{count}</p>
+              </Link>
             </motion.div>
           ))}
         </div>
 
-        <div className="text-center mt-10">
-          <Link href="/discover" className="btn-secondary inline-flex items-center gap-2">
-            Explore all professionals
-          </Link>
+        {/* Featured cards */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={inView ? { opacity: 1 } : {}}
+          transition={{ delay: 0.3 }}
+          className="text-gray-400 dark:text-white/30 text-xs uppercase tracking-widest font-medium mb-5"
+        >
+          Featured professionals
+        </motion.p>
+
+        <div className="grid md:grid-cols-3 gap-4">
+          {FEATURED.map(({ name, role, location, rating, reviews, available, color, initials }, i) => (
+            <motion.div
+              key={name}
+              initial={{ opacity: 0, y: 20 }}
+              animate={inView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.45, delay: 0.35 + i * 0.1 }}
+              className="group relative bg-white dark:bg-white/[0.04] rounded-xl border border-gray-100 dark:border-white/[0.07] p-5 hover:border-gray-300 dark:hover:border-white/15 hover:shadow-md transition-all cursor-pointer"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-11 h-11 rounded-xl flex items-center justify-center text-white text-sm font-black flex-shrink-0"
+                    style={{ background: color }}
+                  >
+                    {initials}
+                  </div>
+                  <div>
+                    <p className="text-gray-900 dark:text-white font-semibold text-sm">{name}</p>
+                    <p className="text-gray-500 dark:text-white/40 text-xs">{role}</p>
+                  </div>
+                </div>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                  available
+                    ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400"
+                    : "text-gray-400 bg-gray-100 dark:bg-white/5 dark:text-white/30"
+                }`}>
+                  {available ? "Available" : "Busy"}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                  <span className="text-gray-700 dark:text-white/70 text-xs font-semibold">{rating}</span>
+                  <span className="text-gray-400 dark:text-white/30 text-xs">({reviews})</span>
+                </div>
+                <div className="flex items-center gap-1 text-gray-400 dark:text-white/30">
+                  <MapPin className="w-3 h-3" />
+                  <span className="text-xs">{location}</span>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/[0.06]">
+                <Link
+                  href="/discover"
+                  className="text-xs font-semibold transition-colors"
+                  style={{ color }}
+                >
+                  View profile →
+                </Link>
+              </div>
+            </motion.div>
+          ))}
         </div>
       </div>
     </section>

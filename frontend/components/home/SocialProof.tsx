@@ -4,37 +4,34 @@ import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import { Star } from "lucide-react";
 
-const STATS = [
-  { value: "50,000+", label: "Professionals using it" },
-  { value: "2M+",     label: "Card views served"      },
-  { value: "98%",     label: "Customer satisfaction"  },
-  { value: "150+",    label: "Countries reached"      },
-];
-
 const REVIEWS = [
   {
     name: "Dr. Ananya Singh",
     role: "Cardiologist, AIIMS Delhi",
-    body: "My patients love the interactive card. It's replaced my old paper visiting cards completely.",
+    body: "My patients can now find and contact me directly through my card. It replaced my old paper visiting cards completely.",
     initials: "AS",
-    color: "#7C3AED",
-    stars: 5,
+    color: "#2563EB",
   },
   {
     name: "Vikram Malhotra",
     role: "Startup Founder, Bangalore",
-    body: "The AI generated my entire card in 30 seconds. It felt like having a personal branding team.",
+    body: "The AI wrote my bio and picked a design in under a minute. Sent it to three investors that same day.",
     initials: "VM",
-    color: "#2563EB",
-    stars: 5,
+    color: "#7C3AED",
   },
   {
     name: "Priya Nambiar",
-    role: "Freelance Photographer",
-    body: "My portfolio card gets 10× more engagement than my old PDF. The analytics alone are worth it.",
+    role: "Freelance Photographer, Mumbai",
+    body: "I found my last three clients through the discover page. People searching for photographers in Mumbai are finding me.",
     initials: "PN",
-    color: "#0891B2",
-    stars: 5,
+    color: "#EC4899",
+  },
+  {
+    name: "Arjun Krishnan",
+    role: "HR Manager, Infosys",
+    body: "We use Digital Diaries to shortlist freelancers. The profiles show skills, availability, and contact — everything in one place.",
+    initials: "AK",
+    color: "#059669",
   },
 ];
 
@@ -42,62 +39,72 @@ export function SocialProof() {
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.05 });
 
   return (
-    <section className="bg-[#F7F8FC] dark:bg-[#0D1321] section-padding" ref={ref}>
+    <section className="bg-white dark:bg-[#0E0C1E] section-padding" ref={ref}>
       <div className="max-w-6xl mx-auto">
 
-        {/* Stats row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
-          {STATS.map(({ value, label }, i) => (
+        {/* Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-20 pb-20 border-b border-gray-100 dark:border-white/[0.06]">
+          {[
+            { v: "50,000+", l: "Professionals" },
+            { v: "2M+",     l: "Card views"    },
+            { v: "98%",     l: "Satisfaction"  },
+            { v: "150+",    l: "Countries"     },
+          ].map(({ v, l }, i) => (
             <motion.div
-              key={label}
-              initial={{ opacity: 0, y: 20 }}
+              key={l}
+              initial={{ opacity: 0, y: 16 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: i * 0.08 }}
+              transition={{ duration: 0.45, delay: i * 0.08 }}
             >
-              <p className="text-3xl lg:text-4xl font-black text-gray-900 dark:text-white tracking-tight">{value}</p>
-              <p className="text-gray-500 dark:text-white/45 text-sm mt-1">{label}</p>
+              <p className="text-3xl lg:text-4xl font-black text-gray-900 dark:text-white tracking-tight">{v}</p>
+              <p className="text-gray-400 dark:text-white/30 text-sm mt-1">{l}</p>
             </motion.div>
           ))}
         </div>
 
-        {/* Section header */}
+        {/* Reviews */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5, delay: 0.25 }}
+          transition={{ duration: 0.45, delay: 0.2 }}
           className="mb-10"
         >
-          <h2 className="text-3xl lg:text-4xl font-black text-gray-900 dark:text-white">
-            What professionals say
+          <p className="text-gray-400 dark:text-white/30 text-xs uppercase tracking-widest font-medium mb-1">
+            What people say
+          </p>
+          <h2 className="text-3xl font-black text-gray-900 dark:text-white">
+            Both sides love it.
           </h2>
         </motion.div>
 
-        {/* Review cards */}
-        <div className="grid md:grid-cols-3 gap-5">
-          {REVIEWS.map(({ name, role, body, initials, color, stars }, i) => (
+        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
+          {REVIEWS.map(({ name, role, body, initials, color }, i) => (
             <motion.div
               key={name}
-              initial={{ opacity: 0, y: 24 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: 0.3 + i * 0.1 }}
-              className="bg-white dark:bg-white/[0.04] rounded-2xl p-6 border border-gray-100 dark:border-white/[0.07] shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none"
+              transition={{ duration: 0.45, delay: 0.25 + i * 0.08 }}
+              className="bg-gray-50 dark:bg-white/[0.03] rounded-xl border border-gray-100 dark:border-white/[0.06] p-5 flex flex-col"
             >
+              {/* Stars */}
               <div className="flex gap-0.5 mb-4">
-                {Array.from({ length: stars }).map((_, j) => (
-                  <Star key={j} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                {[...Array(5)].map((_, j) => (
+                  <Star key={j} className="w-3 h-3 fill-amber-400 text-amber-400" />
                 ))}
               </div>
-              <p className="text-gray-700 dark:text-white/70 text-[15px] leading-relaxed mb-6">
+              <p className="text-gray-700 dark:text-white/60 text-sm leading-relaxed flex-1 mb-5">
                 "{body}"
               </p>
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-black flex-shrink-0"
-                  style={{ background: `${color}` }}>
+              <div className="flex items-center gap-2.5">
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-black flex-shrink-0"
+                  style={{ background: color }}
+                >
                   {initials}
                 </div>
                 <div>
-                  <p className="text-gray-900 dark:text-white font-semibold text-sm">{name}</p>
-                  <p className="text-gray-400 dark:text-white/35 text-xs">{role}</p>
+                  <p className="text-gray-900 dark:text-white font-semibold text-xs">{name}</p>
+                  <p className="text-gray-400 dark:text-white/30 text-[11px]">{role}</p>
                 </div>
               </div>
             </motion.div>
